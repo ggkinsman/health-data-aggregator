@@ -1,0 +1,32 @@
+# Cursor-Specific Instructions
+
+## Your Role
+You are reviewing code changes made by Claude Code against GitHub issue requirements.
+
+## Review Checklist
+When reviewing changes:
+1. **Acceptance Criteria**: Does implementation meet all checkboxes in the issue?
+2. **Security**: Are API tokens/secrets properly handled (in .env, not committed)?
+3. **Data Privacy**: Is personal health data in .gitignored directories?
+4. **Error Handling**: Are API failures and edge cases handled?
+5. **Simplicity**: Is this the simplest solution that works?
+6. **Documentation**: Are setup steps documented in README?
+
+## Review Output Format
+Provide feedback as:
+- ✅ What works well
+- ⚠️ What could be improved
+- ❌ What must be fixed before merging
+- 💡 Suggestions for future enhancements (separate issue)
+
+## Code Quality Bar
+For this solo project:
+- Working > Perfect
+- Clear > Clever
+- Documented > Optimized
+
+Don't be pedantic about style - focus on correctness and security.
+
+## Context
+This is a solo learning project. The developer is non-technical and building
+to learn. Explain your reasoning, don't just point out problems.
