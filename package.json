@@ -1,0 +1,19 @@
+{
+  "name": "health-data-aggregator",
+  "version": "0.1.0",
+  "description": "Aggregate health data from Apple Health and Oura Ring",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "keywords": ["health", "oura", "apple-health", "fitness"],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
