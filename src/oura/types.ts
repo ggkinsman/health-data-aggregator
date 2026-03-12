@@ -105,6 +105,7 @@ export interface DailyReadiness {
 
 export interface DailyReadinessResponse {
   data: DailyReadiness[];
+  next_token?: string | null;
 }
 
 // Daily Sleep
@@ -127,6 +128,7 @@ export interface DailySleep {
 
 export interface DailySleepResponse {
   data: DailySleep[];
+  next_token?: string | null;
 }
 
 // Daily Activity
@@ -147,7 +149,7 @@ export interface DailyActivity {
   equivalent_walking_distance?: number;
   high_activity_met_minutes?: number;
   high_activity_time?: number;
-  inactivity_alierts?: number;
+  inactivity_alerts?: number;
   low_activity_met_minutes?: number;
   low_activity_time?: number;
   medium_activity_met_minutes?: number;
@@ -171,6 +173,7 @@ export interface DailyActivity {
 
 export interface DailyActivityResponse {
   data: DailyActivity[];
+  next_token?: string | null;
 }
 
 // Sleep Session (Detailed)
@@ -226,6 +229,7 @@ export interface SleepSession {
 
 export interface SleepSessionResponse {
   data: SleepSession[];
+  next_token?: string | null;
 }
 
 // Heart Rate
@@ -237,6 +241,7 @@ export interface HeartRate {
 
 export interface HeartRateResponse {
   data: HeartRate[];
+  next_token?: string | null;
 }
 
 // Workout
@@ -260,6 +265,7 @@ export interface Workout {
 
 export interface WorkoutResponse {
   data: Workout[];
+  next_token?: string | null;
 }
 
 // Session
@@ -285,6 +291,7 @@ export interface Session {
 
 export interface SessionResponse {
   data: Session[];
+  next_token?: string | null;
 }
 
 // Tag
@@ -297,6 +304,7 @@ export interface Tag {
 
 export interface TagResponse {
   data: Tag[];
+  next_token?: string | null;
 }
 
 // Personal Info
