@@ -4,6 +4,7 @@
 - ✅ Issue #1: Research data export options (Apple Health + Oura API)
 - ✅ Issue #2: Implement Oura OAuth2 authentication flow
 - ✅ Issue #3: Security hardening for OAuth2 token storage
+- ✅ Issue #4: Oura data fetching client with all 9 API endpoints, TypeScript types, error handling, and 15 passing tests
 - ✅ Workflow documentation setup:
   - `.clinerules` - Development workflow guidelines for Claude Code
   - `.cursorrules` - Review checklist for Cursor
@@ -16,7 +17,6 @@
 ## Next Up
 - ⏭️ Build Apple Health XML export parser
 - ⏭️ Define unified health data schema
-- ⏭️ Create Oura data fetching client
 
 ## Learnings
 ### What Works Well
@@ -24,10 +24,13 @@
 - Claude Code handles API integration and OAuth2 well
 - Security review workflow catches important issues early
 - TypeScript with vitest provides good test coverage
+- Oura API v2 has comprehensive endpoints for all health metrics
+- Token refresh and rate limit handling are critical for reliable API access
+- TypeScript types make the API much easier to work with
 
 ### What to Improve
-- Need to add actual data fetching after auth is complete
 - Consider adding integration tests with real API (sandbox)
+- Add example scripts showing end-to-end usage
 
 ## Key Decisions
 - Using TypeScript (switched from initial Python plan)
