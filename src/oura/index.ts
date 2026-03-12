@@ -1,4 +1,5 @@
 export { OuraAuth } from './auth.js';
+export { OuraClient } from './client.js';
 export {
   OuraOAuthConfig,
   OuraTokens,
@@ -8,4 +9,23 @@ export {
   OuraAPIError,
   OuraMembershipError,
   OuraTokenExpiredError,
+  DateRangeQuery,
+  DailyReadiness,
+  DailyReadinessResponse,
+  DailySleep,
+  DailySleepResponse,
+  DailyActivity,
+  DailyActivityResponse,
+  SleepSession,
+  SleepSessionResponse,
+  HeartRate,
+  HeartRateResponse,
+  Workout,
+  WorkoutResponse,
+  Session,
+  SessionResponse,
+  Tag,
+  TagResponse,
+  PersonalInfo,
+  PersonalInfoResponse,
 } from './types.js';
