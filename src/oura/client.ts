@@ -213,6 +213,9 @@ export class OuraClient {
       if (query.end_date) {
         url.searchParams.set('end_date', query.end_date);
       }
+      if (query.next_token) {
+        url.searchParams.set('next_token', query.next_token);
+      }
     }
     return url.toString();
   }

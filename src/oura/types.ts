@@ -80,6 +80,7 @@ export class OuraTokenExpiredError extends OuraAPIError {
 export interface DateRangeQuery {
   start_date?: string; // YYYY-MM-DD
   end_date?: string; // YYYY-MM-DD
+  next_token?: string;
 }
 
 // Daily Readiness

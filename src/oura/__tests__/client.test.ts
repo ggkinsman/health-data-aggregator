@@ -109,6 +109,28 @@ describe('OuraClient', () => {
       );
     });
 
+    it('should include next_token query parameter', async () => {
+      await tokenStorage.save(userId, mockTokens);
+
+      const mockResponse: DailyReadinessResponse = { data: [] };
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockResponse,
+      });
+
+      await client.getDailyReadiness({
+        start_date: '2024-01-01',
+        end_date: '2024-01-31',
+        next_token: 'abc123',
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('next_token=abc123'),
+        expect.any(Object)
+      );
+    });
+
     it('should refresh tokens if expired', async () => {
       const expiredTokens: OuraTokens = {
         ...mockTokens,
