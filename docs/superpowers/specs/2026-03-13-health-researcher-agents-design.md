@@ -24,7 +24,9 @@ The main voice the user interacts with. A health researcher who specializes in l
 **Responsibilities:**
 - Query the SQLite database across all data sources
 - Identify patterns across all time horizons
+- Write and execute SQL queries or simple statistical code to validate findings (see Analysis Code Execution)
 - Draft insights in plain language with specific numbers
+- Ground interpretive claims in established health/sleep science (see Evidence Grounding)
 - Incorporate reviewer feedback into final output
 - Suggest follow-up analyses and missing data opportunities
 
@@ -64,11 +66,15 @@ The main voice the user interacts with. A health researcher who specializes in l
 ```
 1. Data context builder queries SQLite → assembles structured snapshot
 2. Hayden receives data context + user question (or report parameters)
-3. Hayden drafts insight(s) in structured format
+2a. Query clarification: if the question is ambiguous, Hayden first produces
+    an analysis plan (what metrics, what time window, what comparison)
+    before drafting insights
+3. Hayden drafts insight(s), optionally writing + executing SQL/stats code
 4. Statistical Analyst reviews draft + raw data context
 5. Sleep Specialist reviews draft + sleep/respiratory data subset
 6. Biomarker Specialist reviews draft + activity/cardiovascular/blood panel subset
 7. Hayden receives all three reviews, revises, and delivers final output
+8. Session memory updated with key findings and open questions
 ```
 
 ## Orchestration Architecture
@@ -128,8 +134,9 @@ reports/
 │   └── 2026-03-13.md           # Daily briefing
 ├── weekly/
 │   └── 2026-W11.md             # Weekly deep dive
-└── reviews/
-    └── 2026-03-13-daily.json   # Reviewer verdicts (for --show-review)
+├── reviews/
+│   └── 2026-03-13-daily.json   # Reviewer verdicts (for --show-review)
+└── memory.json                  # Session memory (findings, open questions, baselines)
 ```
 
 - Reports are date-stamped markdown files
@@ -184,15 +191,118 @@ Data Context:
 
 Hayden is instructed to look for corroborations and contradictions across sources. When sources disagree (e.g., Oura reports 7h sleep, Apple Health reports 6.5h), explain likely reasons rather than ignoring the discrepancy.
 
+## Analysis Code Execution
+
+Inspired by PHA's Data Science Agent, Hayden can write and execute code against the SQLite database to produce rigorous, verifiable findings rather than relying solely on LLM reasoning over pre-computed snapshots.
+
+### How It Works
+
+During the draft phase, Hayden can include SQL queries or simple TypeScript statistical computations in the draft output. The orchestration script:
+
+1. Extracts code blocks tagged as `executable` from Hayden's draft
+2. Runs them against the SQLite database in a sandboxed context (read-only, no writes)
+3. Appends the results back to Hayden's context for the revision call
+
+### When To Use Code Execution
+
+- **Correlation analysis:** "Does my HRV correlate with workout intensity?" → compute Pearson correlation
+- **Trend validation:** "Is my deep sleep declining?" → linear regression over the time window
+- **Anomaly investigation:** "What happened on March 5th?" → query raw records for that day
+- **Comparison queries:** "How does my weekday sleep compare to weekends?" → grouped averages with statistical test
+
+### Scope Constraints
+
+- Read-only access to the SQLite database
+- No external network calls
+- Execution timeout: 5 seconds per query
+- Results are included in the reviewer context so the Statistical Analyst can verify the methodology
+
+## Evidence Grounding
+
+When Hayden makes interpretive claims about health metrics, the prompt instructs grounding in established science:
+
+- **Reference known baselines:** "Deep sleep typically comprises 15-25% of total sleep in adults your age" when contextualizing a finding
+- **Cite mechanisms:** "HRV tends to drop after alcohol consumption because alcohol suppresses parasympathetic nervous system activity" — not just "alcohol affects HRV"
+- **Acknowledge limits:** When the science is uncertain or contested, say so. "The relationship between HRV and stress is well-established, but the optimal HRV range is highly individual"
+- **No diagnosis:** Hayden explains what the data shows and what the science says, but never diagnoses conditions. Concerning patterns are flagged with a recommendation to discuss with a healthcare provider
+
+This is baked into the prompt, not a separate agent or API call. Hayden draws on the LLM's training knowledge for health science context.
+
+## Query Clarification
+
+For ambiguous or vague questions, Hayden produces an **analysis plan** before drafting insights. This is inspired by PHA's two-stage Data Science module.
+
+### Examples
+
+| User asks | Hayden's analysis plan |
+|-----------|----------------------|
+| "Am I sleeping well?" | Compare last 30 days of total sleep, deep sleep %, sleep efficiency, and sleep onset time against 90-day personal baselines. Check for trends. |
+| "How's my health?" | Produce a multi-domain summary: sleep quality (7-day), cardiovascular trends (30-day), activity levels (7-day), and flag any anomalies across all sources. |
+| "Why do I feel tired?" | Investigate last 7 days: sleep duration and quality, HRV trends, readiness scores, recent workout load, and any CPAP issues (if available). |
+
+### In Automated Mode
+
+Report templates serve as pre-defined analysis plans, so the clarification step is skipped. The daily briefing template already specifies which metrics and time windows to analyze.
+
+## Safety Guardrails
+
+All agent prompts include these safety guidelines:
+
+1. **Never diagnose.** Hayden is a data researcher, not a clinician. "Your data shows X pattern" is acceptable. "You have condition Y" is never acceptable.
+2. **Recommend professional consultation for concerning trends.** If a metric shows a sustained, significant deviation from baseline (e.g., resting HR up 10+ bpm for a week, AHI consistently above 15), Hayden flags it clearly: "This trend is worth discussing with your doctor."
+3. **Distinguish observation from advice.** Data observations ("your deep sleep dropped 30% this week") are clearly separated from suggestions ("consider whether your new evening routine might be a factor").
+4. **No medication or supplement recommendations.** Hayden can note correlations ("your HRV improved during the weeks you logged magnesium intake") but never recommends starting, stopping, or changing medications or supplements.
+5. **Mental health sensitivity.** If data patterns could indicate mental health concerns (e.g., prolonged sleep disruption, dramatic activity drops), Hayden acknowledges the data gently and suggests speaking with a healthcare provider rather than speculating on causes.
+
+## Session Memory
+
+A lightweight JSON file (`reports/memory.json`) maintains continuity between interactive sessions and across automated reports.
+
+### What Gets Stored
+
+```json
+{
+  "lastUpdated": "2026-03-13",
+  "recentFindings": [
+    {
+      "date": "2026-03-13",
+      "insight": "Deep sleep trending down 15% over 3 weeks",
+      "status": "open",
+      "followUp": "Check if trend continues or reverses"
+    }
+  ],
+  "openQuestions": [
+    "Does weekend sleep timing affect Monday readiness?"
+  ],
+  "userConcerns": [
+    "Interested in HRV trends around travel"
+  ],
+  "baselineSnapshots": {
+    "restingHR_90day": 54,
+    "hrvMean_90day": 42,
+    "deepSleepPct_90day": 0.18
+  }
+}
+```
+
+### How It's Used
+
+- **Interactive mode:** Memory is loaded into Hayden's context at the start of each pipeline run. Hayden can reference prior findings ("Last week I noted your deep sleep was declining — it's continued this week") and track open questions.
+- **Automated mode:** After each report, the pipeline updates memory with new findings and marks resolved questions.
+- **Pruning:** Findings older than 90 days with status "resolved" are automatically archived. Memory file stays small.
+
 ## Structured Output Formats
 
 ### Hayden's Draft (to reviewers)
 
 ```markdown
 ## Insight: [title]
+- Analysis plan: [what was investigated and why this approach]
 - Time horizon: short / medium / long
 - Data sources used: [list]
+- Code executed: [SQL/stats code and results, if any]
 - Finding: [plain language description]
+- Science context: [relevant health science grounding, if applicable]
 - Confidence: high / moderate / low
 - Actionable: yes / no
 - If actionable: [suggested action]
