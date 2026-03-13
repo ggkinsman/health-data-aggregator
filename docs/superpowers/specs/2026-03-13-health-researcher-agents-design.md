@@ -71,22 +71,96 @@ The main voice the user interacts with. A health researcher who specializes in l
 7. Hayden receives all three reviews, revises, and delivers final output
 ```
 
+## Orchestration Architecture
+
+### Runtime Mechanism
+
+A TypeScript script (`scripts/health-pipeline.ts`) using the Anthropic SDK to make sequential API calls. Each agent is a separate `messages.create()` call with its own system prompt loaded from the `prompts/` directory.
+
+### Data Flow Between Calls
+
+All data flows in-memory within a single script execution:
+
+1. **Data context builder** (TypeScript function) queries SQLite, returns a structured JSON object
+2. **Hayden draft call** — system prompt from `hayden-researcher.md`, user message contains serialized data context + question/report params. Returns draft text.
+3. **Three reviewer calls (parallel)** — each gets its own system prompt + Hayden's draft + relevant data subset as the user message. Returns structured review verdict.
+4. **Hayden revision call** — extends the original Hayden conversation with reviewer feedback appended as a follow-up user message. Returns final output.
+
+Total: **5 API calls per pipeline run** (1 draft + 3 parallel reviews + 1 revision).
+
+### Entry Points
+
+- **Interactive:** `npm run health:ask -- "why was my sleep bad last week?"` — runs the full pipeline, prints Hayden's final output to stdout. Review verdicts are saved to a temp file; user can re-run with `--show-review` to see them.
+- **Automated:** `npm run health:report -- --type daily|weekly` — runs the pipeline with report template parameters instead of a user question. Saves output to `reports/`.
+
+### Reviewer Data Subsetting
+
+The orchestration script filters the data context before passing to each reviewer:
+- **Statistical Analyst:** Full data context (needs all numbers to verify claims)
+- **Sleep Specialist:** Filters to sleep stages, HRV, temperature, SpO2, respiratory data, CPAP metrics
+- **Biomarker Specialist:** Filters to activity, cardiovascular, readiness, workout, blood panel metrics
+
+## Failure Handling
+
+### LLM Call Failures
+
+- **Retry:** Each API call retries up to 2 times with exponential backoff (1s, 3s) for transient errors (rate limits, timeouts)
+- **Partial review fallback:** If a reviewer call fails after retries, Hayden proceeds with available reviews. The final output includes a note: "Note: [reviewer role] review was unavailable for this analysis."
+- **Hayden draft failure:** Fatal — no output is produced. Logged as an error.
+
+### Data Issues
+
+- **Empty data context:** If no data exists for the requested time window, the pipeline exits early with a message: "No data available for [time range]. Last sync: [date]."
+- **Stale data:** If the most recent sync is >48 hours old, Hayden's output includes a staleness warning.
+
+### Output Validation
+
+- **Reviewer output parsing:** If a reviewer's response doesn't follow the structured format, treat it as a free-text review and pass it to Hayden as-is. Don't block the pipeline on format issues.
+- **Automated mode logging:** All pipeline runs log to `~/Library/Logs/health-pipeline.log` with timestamps, call durations, token counts, and any errors.
+
+## Output Storage
+
+### Report Files
+
+```
+reports/
+├── daily/
+│   └── 2026-03-13.md           # Daily briefing
+├── weekly/
+│   └── 2026-W11.md             # Weekly deep dive
+└── reviews/
+    └── 2026-03-13-daily.json   # Reviewer verdicts (for --show-review)
+```
+
+- Reports are date-stamped markdown files
+- Reviewer verdicts are saved as JSON alongside each report for on-demand viewing
+- Historical reports are queryable — Hayden can reference past reports when answering interactive questions
+
+### Delivery
+
+- **Automated reports:** Saved to `reports/` directory. At the start of each Claude Code session, Hayden can check for unread reports and surface highlights.
+- **Interactive:** Output printed to stdout in the terminal
+
 ## Data Architecture
 
 ### Data Context Snapshot
 
-A script queries SQLite and assembles a structured block passed to all agents:
+A TypeScript function queries SQLite and assembles a structured JSON block passed to all agents. The primary data source is the existing `daily_summary` table (built by `summary-builder.ts`), supplemented by raw tables only when finer granularity is needed.
 
 ```
 Data Context:
 ├── Time range available: [earliest date] → [latest date]
-├── Short-term (last 3 days): sleep, HRV, HR, activity, readiness
-├── Medium-term (last 30 days): same metrics with trend summaries
-├── Long-term (last 6 months): monthly averages, trend direction
+├── Short-term (last 3 days): daily summaries + hourly HR/HRV from raw tables
+├── Medium-term (last 30 days): daily summaries with computed trend direction
+├── Long-term (last 6 months): monthly averages from daily summaries
 ├── Year-over-year: same-month comparisons where data exists
 ├── Source coverage: which sources have data for which periods
-└── Anomalies: any values >2 std deviations from personal baseline
+└── Anomalies: values >2 std deviations from 90-day rolling average
 ```
+
+**Anomaly detection:** Computed in SQL using a 90-day rolling window per metric. Any daily value more than 2 standard deviations from the rolling mean is flagged.
+
+**Context size target:** ~2,000-4,000 tokens for the data snapshot. Daily summaries are already aggregated, so even 6 months fits comfortably. Raw hourly data is only included for the short-term window (last 3 days).
 
 ### Data Sources
 
@@ -193,11 +267,26 @@ Scheduled via launchd on Mac Mini:
 
 The script assembles the data context, runs the full pipeline, and outputs a markdown report.
 
-## Model Selection
+## Model Selection & Cost
 
 - **Hayden (researcher):** Sonnet or Opus — needs strong reasoning and natural communication
 - **Reviewers:** Haiku — focused verification tasks, lower token cost
-- Each report = 4 LLM calls (1 Hayden draft + 3 reviews + 1 Hayden revision, where the revision can share the draft call context)
+- Each report = **5 API calls** (1 Hayden draft + 3 parallel reviews + 1 Hayden revision). Prompt caching on the revision call reduces cost since it shares context with the draft.
+
+### Estimated Cost Per Run
+
+Assuming ~4K tokens data context, ~1K token responses per agent:
+- **Hayden (Sonnet):** ~$0.02-0.04 per run (draft + revision)
+- **3x Reviewers (Haiku):** ~$0.003 total
+- **Per daily report:** ~$0.03-0.05
+- **Per week (7 daily + 1 weekly):** ~$0.30-0.50
+- **Monthly estimate:** ~$1.50-2.50
+
+Cost is modest. No budget cap needed at this scale, but the pipeline logs token counts per run for monitoring.
+
+## Naming Convention
+
+In code, the primary agent is referenced as `researcher`. The "Dr. Hayden" persona name appears only in prompt files and user-facing output.
 
 ## File Structure
 
