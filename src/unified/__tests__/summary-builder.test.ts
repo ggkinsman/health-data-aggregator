@@ -169,4 +169,60 @@ describe('buildDailySummaries', () => {
     expect(results[0].workout_count).toBe(2);
     expect(results[0].workout_minutes).toBeGreaterThan(0);
   });
+
+  it('deduplicates overlapping workouts — keeps Apple Health, discards Oura', () => {
+    // Same morning run recorded by both devices
+    db.prepare(
+      `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
+    ).run('workout-oura-1', '2024-06-15', JSON.stringify({
+      activity: 'running',
+      start_datetime: '2024-06-15T07:00:00+00:00',
+      end_datetime: '2024-06-15T07:45:00+00:00',
+    }));
+
+    db.prepare(
+      `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run('HKWorkoutActivityTypeRunning', 'Watch', '2024-06-15T07:01:00.000Z', '2024-06-15T07:44:00.000Z', 43, '{}');
+
+    const results = buildDailySummaries(db);
+
+    expect(results.length).toBe(1);
+    expect(results[0].workout_count).toBe(1);
+    expect(results[0].workout_minutes).toBe(43);
+  });
+
+  it('keeps Oura-only workout when no Apple Health workouts exist', () => {
+    db.prepare(
+      `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
+    ).run('workout-oura-only', '2024-06-15', JSON.stringify({
+      activity: 'walking',
+      start_datetime: '2024-06-15T12:00:00+00:00',
+      end_datetime: '2024-06-15T12:30:00+00:00',
+    }));
+
+    const results = buildDailySummaries(db);
+
+    expect(results.length).toBe(1);
+    expect(results[0].workout_count).toBe(1);
+    expect(results[0].workout_minutes).toBe(30);
+    expect(results[0].sources).toBe('oura');
+  });
+
+  it('keeps Oura workout when timestamps are missing (cannot prove overlap)', () => {
+    db.prepare(
+      `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
+    ).run('workout-no-times', '2024-06-15', JSON.stringify({
+      activity: 'walking',
+    }));
+
+    db.prepare(
+      `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run('HKWorkoutActivityTypeWalking', 'Watch', '2024-06-15T08:00:00.000Z', '2024-06-15T08:30:00.000Z', 30, '{}');
+
+    const results = buildDailySummaries(db);
+
+    expect(results.length).toBe(1);
+    // Both kept: AH workout + Oura workout (no timestamps to compare)
+    expect(results[0].workout_count).toBe(2);
+  });
 });
