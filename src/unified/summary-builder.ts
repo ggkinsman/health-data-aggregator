@@ -180,13 +180,13 @@ function buildDay(db: Database.Database, day: string): DailySummary | null {
     if (avgHrv !== null) sources.add('apple_health');
   }
 
-  // Workouts: source-priority dedup (Apple Health > Oura)
+  // Workouts: Apple Watch + non-overlapping Oura (skip third-party HealthKit sources to avoid dupes)
   const ouraWorkouts = db.prepare(
     `SELECT raw_json FROM oura_workouts WHERE day = ?`
   ).all(day) as { raw_json: string }[];
 
   const ahWorkouts = db.prepare(
-    `SELECT start_date, end_date, duration FROM apple_health_workouts WHERE DATE(start_date) = ? AND source_name != 'Oura'`
+    `SELECT start_date, end_date, duration FROM apple_health_workouts WHERE DATE(start_date) = ? AND source_name LIKE '%Watch%'`
   ).all(day) as { start_date: string; end_date: string; duration: number | null }[];
 
   // Parse AH time intervals for overlap checking

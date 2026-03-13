@@ -161,7 +161,7 @@ describe('buildDailySummaries', () => {
 
     db.prepare(
       `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
-    ).run('HKWorkoutActivityTypeYoga', 'Watch', '2024-06-15T18:00:00.000Z', '2024-06-15T18:30:00.000Z', 30, '{}');
+    ).run('HKWorkoutActivityTypeYoga', "Glenn's Apple Watch", '2024-06-15T18:00:00.000Z', '2024-06-15T18:30:00.000Z', 30, '{}');
 
     const results = buildDailySummaries(db);
 
@@ -182,7 +182,7 @@ describe('buildDailySummaries', () => {
 
     db.prepare(
       `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
-    ).run('HKWorkoutActivityTypeRunning', 'Watch', '2024-06-15T07:01:00.000Z', '2024-06-15T07:44:00.000Z', 43, '{}');
+    ).run('HKWorkoutActivityTypeRunning', "Glenn's Apple Watch", '2024-06-15T07:01:00.000Z', '2024-06-15T07:44:00.000Z', 43, '{}');
 
     const results = buildDailySummaries(db);
 
@@ -208,32 +208,26 @@ describe('buildDailySummaries', () => {
     expect(results[0].sources).toBe('oura');
   });
 
-  it('excludes Oura-synced workouts from Apple Health to avoid triple-counting', () => {
-    // Oura syncs workouts into HealthKit — these show up in apple_health_workouts with source_name='Oura'
+  it('only counts Apple Watch workouts from HealthKit, ignoring third-party sources', () => {
+    // Peloton and Oura sync into HealthKit — should be ignored
     db.prepare(
-      `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
-    ).run('workout-oura-synced', '2024-06-15', JSON.stringify({
-      activity: 'walking',
-      start_datetime: '2024-06-15T12:00:00+00:00',
-      end_datetime: '2024-06-15T12:30:00+00:00',
-    }));
+      `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run('HKWorkoutActivityTypeCycling', 'Peloton', '2024-06-15T07:00:00.000Z', '2024-06-15T07:30:00.000Z', 30, '{}');
 
-    // Same workout synced into Apple Health by Oura app
     db.prepare(
       `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
     ).run('HKWorkoutActivityTypeWalking', 'Oura', '2024-06-15T12:00:00.000Z', '2024-06-15T12:30:00.000Z', 30, '{}');
 
-    // A real Apple Watch workout
+    // Only Apple Watch workout should count
     db.prepare(
       `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
-    ).run('HKWorkoutActivityTypeYoga', 'Watch', '2024-06-15T18:00:00.000Z', '2024-06-15T18:30:00.000Z', 30, '{}');
+    ).run('HKWorkoutActivityTypeYoga', "Glenn's Apple Watch", '2024-06-15T18:00:00.000Z', '2024-06-15T18:30:00.000Z', 30, '{}');
 
     const results = buildDailySummaries(db);
 
     expect(results.length).toBe(1);
-    // Oura-synced AH record excluded, Oura workout deduped against real AH → only Watch yoga + Oura walk kept
-    expect(results[0].workout_count).toBe(2);
-    expect(results[0].workout_minutes).toBe(60);
+    expect(results[0].workout_count).toBe(1);
+    expect(results[0].workout_minutes).toBe(30);
   });
 
   it('keeps Oura workout when timestamps are missing (cannot prove overlap)', () => {
@@ -245,7 +239,7 @@ describe('buildDailySummaries', () => {
 
     db.prepare(
       `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
-    ).run('HKWorkoutActivityTypeWalking', 'Watch', '2024-06-15T08:00:00.000Z', '2024-06-15T08:30:00.000Z', 30, '{}');
+    ).run('HKWorkoutActivityTypeWalking', "Glenn's Apple Watch", '2024-06-15T08:00:00.000Z', '2024-06-15T08:30:00.000Z', 30, '{}');
 
     const results = buildDailySummaries(db);
 
