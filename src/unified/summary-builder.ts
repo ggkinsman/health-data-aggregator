@@ -180,31 +180,53 @@ function buildDay(db: Database.Database, day: string): DailySummary | null {
     if (avgHrv !== null) sources.add('apple_health');
   }
 
-  // Workouts from both sources
+  // Workouts: source-priority dedup (Apple Health > Oura)
   const ouraWorkouts = db.prepare(
     `SELECT raw_json FROM oura_workouts WHERE day = ?`
   ).all(day) as { raw_json: string }[];
 
   const ahWorkouts = db.prepare(
-    `SELECT duration FROM apple_health_workouts WHERE DATE(start_date) = ?`
-  ).all(day) as { duration: number | null }[];
+    `SELECT start_date, end_date, duration FROM apple_health_workouts WHERE DATE(start_date) = ?`
+  ).all(day) as { start_date: string; end_date: string; duration: number | null }[];
 
-  const workoutCount = ouraWorkouts.length + ahWorkouts.length;
-  let workoutMinutes = 0;
+  // Parse AH time intervals for overlap checking
+  const ahIntervals = ahWorkouts.map(w => ({
+    start: new Date(w.start_date).getTime(),
+    end: new Date(w.end_date).getTime(),
+    duration: w.duration,
+  }));
 
+  // Keep Oura workouts that don't overlap with any AH workout
+  const keptOuraWorkouts: { startMs: number; endMs: number }[] = [];
   for (const w of ouraWorkouts) {
-    sources.add('oura');
     const data = JSON.parse(w.raw_json);
-    if (data.start_datetime && data.end_datetime) {
-      const start = new Date(data.start_datetime).getTime();
-      const end = new Date(data.end_datetime).getTime();
-      workoutMinutes += (end - start) / 60000;
+    if (!data.start_datetime || !data.end_datetime) {
+      // No timestamps — can't prove overlap, keep it
+      keptOuraWorkouts.push({ startMs: 0, endMs: 0 });
+      continue;
+    }
+    const oStart = new Date(data.start_datetime).getTime();
+    const oEnd = new Date(data.end_datetime).getTime();
+    const overlaps = ahIntervals.some(ah => oStart < ah.end && oEnd > ah.start);
+    if (!overlaps) {
+      keptOuraWorkouts.push({ startMs: oStart, endMs: oEnd });
     }
   }
+
+  // Count and sum minutes from deduplicated list
+  const workoutCount = ahWorkouts.length + keptOuraWorkouts.length;
+  let workoutMinutes = 0;
 
   for (const w of ahWorkouts) {
     sources.add('apple_health');
     if (w.duration) workoutMinutes += w.duration;
+  }
+
+  for (const w of keptOuraWorkouts) {
+    sources.add('oura');
+    if (w.startMs && w.endMs) {
+      workoutMinutes += (w.endMs - w.startMs) / 60000;
+    }
   }
 
   // Timezone detection
