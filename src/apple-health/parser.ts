@@ -36,6 +36,17 @@ export function normalizeTimestamp(raw: string | undefined): string {
 }
 
 /**
+ * Extract the timezone offset from an Apple Health timestamp.
+ * Input:  "2024-01-15 08:30:00 -0500"
+ * Output: "-0500"
+ */
+export function extractTimezoneOffset(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const match = raw.match(/([+-]\d{4})$/);
+  return match ? match[1] : undefined;
+}
+
+/**
  * Stream-parse an Apple Health export.xml, emitting batches of records and workouts.
  */
 export function parseAppleHealthExport(
@@ -89,10 +100,13 @@ export function parseAppleHealthExport(
 
           recordCounts[type] = (recordCounts[type] ?? 0) + 1;
 
+          // Capture raw startDate before normalization (for timezone extraction)
+          const rawStartDate = node.attributes.startDate as string;
+
           const record: AppleHealthRecord = {
             type,
             sourceName: node.attributes.sourceName as string,
-            startDate: normalizeTimestamp(node.attributes.startDate as string),
+            startDate: normalizeTimestamp(rawStartDate),
             endDate: normalizeTimestamp(node.attributes.endDate as string),
           };
           if (node.attributes.sourceVersion) record.sourceVersion = node.attributes.sourceVersion as string;
@@ -100,6 +114,8 @@ export function parseAppleHealthExport(
           if (node.attributes.value) record.value = node.attributes.value as string;
           if (node.attributes.device) record.device = node.attributes.device as string;
           if (node.attributes.creationDate) record.creationDate = normalizeTimestamp(node.attributes.creationDate as string);
+          const tzOffset = extractTimezoneOffset(rawStartDate);
+          if (tzOffset) record.timezoneOffset = tzOffset;
 
           recordBatch.push(record);
           if (recordBatch.length >= batchSize) {
