@@ -15,3 +15,7 @@ if [ -f .env ]; then
 fi
 
 npx tsx scripts/sync-oura.ts 2>&1
+
+# Rebuild last week's daily summaries after sync
+echo "Building daily summaries..."
+npx tsx scripts/build-summaries.ts --days 7 2>&1

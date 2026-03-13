@@ -1,4 +1,10 @@
 import type Database from 'better-sqlite3';
+import {
+  VIEW_UNIFIED_HEART_RATE,
+  VIEW_UNIFIED_WORKOUTS,
+  VIEW_UNIFIED_SLEEP,
+  VIEW_UNIFIED_HRV,
+} from '../unified/views.js';
 
 /**
  * Run database migrations up to the latest version.
@@ -14,6 +20,9 @@ export function runMigrations(db: Database.Database): void {
   }
   if (currentVersion < 2) {
     migrateV2(db);
+  }
+  if (currentVersion < 3) {
+    migrateV3(db);
   }
 }
 
@@ -144,4 +153,47 @@ function migrateV2(db: Database.Database): void {
 
     PRAGMA user_version = 2;
   `);
+}
+
+/**
+ * V3: Unified schema - daily summary table, SQL views, timezone offset column
+ */
+function migrateV3(db: Database.Database): void {
+  db.exec(`
+    ALTER TABLE apple_health_records ADD COLUMN timezone_offset TEXT;
+
+    CREATE TABLE IF NOT EXISTS daily_summary (
+      day TEXT PRIMARY KEY,
+      readiness_score INTEGER,
+      sleep_score INTEGER,
+      activity_score INTEGER,
+      total_sleep_minutes INTEGER,
+      deep_sleep_minutes INTEGER,
+      rem_sleep_minutes INTEGER,
+      sleep_efficiency REAL,
+      avg_resting_hr REAL,
+      min_hr INTEGER,
+      max_hr INTEGER,
+      avg_hrv REAL,
+      steps INTEGER,
+      active_calories INTEGER,
+      workout_count INTEGER,
+      workout_minutes REAL,
+      cpap_hours REAL,
+      cpap_ahi REAL,
+      timezone_offset TEXT,
+      timezone_change INTEGER,
+      location_label TEXT,
+      sources TEXT,
+      built_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_daily_summary_sources ON daily_summary(sources);
+  `);
+
+  db.exec(VIEW_UNIFIED_HEART_RATE);
+  db.exec(VIEW_UNIFIED_WORKOUTS);
+  db.exec(VIEW_UNIFIED_SLEEP);
+  db.exec(VIEW_UNIFIED_HRV);
+
+  db.exec('PRAGMA user_version = 3;');
 }

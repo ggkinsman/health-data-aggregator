@@ -10,7 +10,8 @@
     "test:run": "vitest run",
     "sync:oura": "tsx scripts/sync-oura.ts",
     "auth:oura": "tsx scripts/auth-oura.ts",
-    "import:apple": "tsx scripts/import-apple-health.ts"
+    "import:apple": "tsx scripts/import-apple-health.ts",
+    "build:summaries": "tsx scripts/build-summaries.ts"
   },
   "keywords": [
     "health",

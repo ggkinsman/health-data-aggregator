@@ -12,17 +12,18 @@
 - ✅ Initial Oura sync complete: 2,938+ records across 9 endpoints (2026-03-12)
 - ✅ Automated launchd sync active at 9 AM / 8 PM (`com.health-data-aggregator.oura-sync`)
 - ✅ Workflow documentation setup (.clinerules, .cursorrules, PROMPTS.md, issue templates)
+- ✅ Apple Health XML parser: SAX streaming, V2 migration, 16 tests, `npm run import:apple` (2026-03-12)
+- ✅ First Apple Health import: 1,478,425 records (1.3M HR, 105K sleep, 22K HRV, 2.6K resting HR, 2.7K workouts) (2026-03-12)
+- ✅ Unified health schema: daily_summary table, 4 SQL views, timezone extraction, activity type normalization (2026-03-13)
 
 ## In Progress
 - CPAP/OSCAR integration — blocked on prerequisites (see docs/plans/cpap-oscar-integration.md)
   - Waiting on: SD card purchase, HIPAA data requests sent 2026-03-12
 
 ## Next Up
-- ⏭️ Build Apple Health XML export parser
+- ⏭️ HTML health dashboard
 - ⏭️ CPAP/OSCAR reader (once SD card + OSCAR setup complete)
 - ⏭️ Historical CPAP data parser (if HIPAA request returns CSV/Excel)
-- ⏭️ Define unified health data schema
-- ⏭️ Create data aggregation/merging logic
 
 ## Key Decisions
 - Using TypeScript (switched from initial Python plan)
@@ -36,5 +37,5 @@
 | Source | Method | Status |
 |--------|--------|--------|
 | Oura Ring | OAuth2 API + incremental sync | ✅ Working |
-| Apple Health | XML export parsing | ⏭️ Not started |
+| Apple Health | XML export parsing | ✅ 1.48M records imported |
 | CPAP (ResMed AirSense 11) | OSCAR data reader | Blocked on setup |

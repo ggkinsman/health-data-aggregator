@@ -8,6 +8,7 @@ export interface AppleHealthRecord {
   endDate: string;
   device?: string;
   creationDate?: string;
+  timezoneOffset?: string;
 }
 
 export interface AppleHealthWorkout {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { parseAppleHealthExport, normalizeTimestamp } from '../parser.js';
+import { parseAppleHealthExport, normalizeTimestamp, extractTimezoneOffset } from '../parser.js';
 import type { AppleHealthRecord, AppleHealthWorkout } from '../types.js';
 
 function writeTempXml(content: string): string {
@@ -38,6 +38,19 @@ describe('normalizeTimestamp', () => {
   it('returns raw string if format is unrecognized', () => {
     expect(normalizeTimestamp('2024-01-15T08:30:00Z'))
       .toBe('2024-01-15T08:30:00Z');
+  });
+});
+
+describe('extractTimezoneOffset', () => {
+  it('extracts offset from Apple Health timestamp', () => {
+    expect(extractTimezoneOffset('2024-01-15 08:30:00 -0500')).toBe('-0500');
+    expect(extractTimezoneOffset('2024-06-20 14:00:00 +0100')).toBe('+0100');
+  });
+
+  it('returns undefined for missing or invalid input', () => {
+    expect(extractTimezoneOffset(undefined)).toBeUndefined();
+    expect(extractTimezoneOffset('')).toBeUndefined();
+    expect(extractTimezoneOffset('2024-01-15T08:30:00Z')).toBeUndefined();
   });
 });
 
