@@ -251,6 +251,8 @@ When Hayden makes interpretive claims about health metrics, the prompt instructs
 
 This is baked into the prompt, not a separate agent or API call. Hayden draws on the LLM's training knowledge for health science context.
 
+**Future enhancement:** External literature lookup (PHA uses NCBI API, Web Search, DataCommons API) is deferred for v1. LLM training knowledge covers most sleep/fitness/cardiovascular science adequately. External lookups become more valuable when Function Health blood panels arrive and biomarker interpretation benefits from current published reference ranges.
+
 ## Query Clarification
 
 For ambiguous or vague questions, Hayden produces an **analysis plan** before drafting insights. This is inspired by PHA's two-stage Data Science module.
@@ -497,6 +499,32 @@ When new data sources come online (CPAP, Function Health):
 4. **Biomarker Specialist** — gains Function Health review responsibilities (already scoped)
 5. **No new agents needed** — existing reviewers cover the domains
 6. **Prompt update** — flip source status from `🔜 Coming` to `✅ Live`, add metric definitions
+
+## Evaluation
+
+PHA invested in 7,000+ expert annotations across 10 benchmark tasks. We don't need that scale for a personal tool, but we do need a way to know if the pipeline is working well.
+
+### Test Queries
+
+Representative queries to validate pipeline behavior during development and after prompt changes:
+
+| Query | Expected Behavior |
+|-------|-------------------|
+| "How did I sleep last night?" | Short-term analysis of last night's sleep stages, duration, HRV. Compares to personal baseline. |
+| "Am I sleeping well?" | Query clarification → analysis plan. 30-day trend across multiple sleep metrics vs. 90-day baselines. |
+| "Why do I feel tired?" | Multi-domain investigation: sleep quality, HRV trends, readiness, workout load, CPAP (if available). |
+| "How does my weekday sleep compare to weekends?" | Code execution: grouped averages with statistical comparison. Concrete numbers. |
+| "What's the most interesting thing in my data?" | Open-ended exploration. Should surface genuine anomalies or cross-source patterns, not just report averages. |
+| "Is my resting heart rate changing?" | Long-term trend analysis with code execution. Should include trend direction, magnitude, and confidence. |
+| "Show me the review" | Surfaces all three reviewer verdicts from the most recent analysis. |
+| (Daily automated report) | Covers last night's sleep + yesterday's activity. Flags anomalies. Includes go-deeper suggestions. Not boring. |
+| (Weekly automated report) | Multi-domain trends. Cross-source patterns. Goal progress. At least one go-deeper suggestion. |
+
+### Quality Review Process
+
+- **Monthly spot check:** Review 2-3 recent automated reports for accuracy, usefulness, and whether the insights are genuinely interesting vs. routine
+- **After prompt changes:** Re-run the test queries above and compare output quality
+- **Pipeline health metrics:** Log token counts, execution times, and error rates per run. Watch for drift over time
 
 ## Research References
 
