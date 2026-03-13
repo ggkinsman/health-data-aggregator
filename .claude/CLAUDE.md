@@ -12,10 +12,12 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 
 ## Project Structure
 - `src/oura/` — Oura API client, auth, types (9 endpoints)
-- `src/db/` — SQLite database layer, migrations, Oura repository
+- `src/apple-health/` — Apple Health XML parser, repository, types
+- `src/unified/` — Unified schema: daily summary builder, SQL views, activity type normalization
+- `src/db/` — SQLite database layer, migrations (V1: Oura, V2: Apple Health, V3: unified schema)
 - `src/storage/` — Encrypted token storage
 - `src/cpap/` — CPAP data reader (planned)
-- `scripts/` — CLI scripts (sync-oura, auth-oura)
+- `scripts/` — CLI scripts (sync-oura, auth-oura, import-apple-health, build-summaries)
 - `data/` — Local health data storage (gitignored)
 - `docs/plans/` — Implementation plans
 
@@ -25,12 +27,14 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `npm run build` — TypeScript compilation
 - `npm run auth:oura` — One-time OAuth2 setup
 - `npm run sync:oura` — Incremental Oura data sync
+- `npm run import:apple` — Import Apple Health XML export
+- `npm run build:summaries` — Build daily summary rollups (use `--days N` to limit)
 
 ## Automated Sync
 - launchd job: `com.health-data-aggregator.oura-sync` (9 AM / 8 PM)
 - Plist: `~/Library/LaunchAgents/com.health-data-aggregator.oura-sync.plist`
 - Logs: `~/Library/Logs/health-data-oura-sync.log`
-- Wrapper: `scripts/run-sync.sh`
+- Wrapper: `scripts/run-sync.sh` (also rebuilds last 7 days of daily summaries)
 
 ## Oura API Gotchas
 - Heart rate endpoint is `/heartrate` (no underscore), not `/heart_rate`
