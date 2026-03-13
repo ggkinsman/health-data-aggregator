@@ -322,7 +322,7 @@ describe('OuraClient', () => {
       await client.getHeartRate();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('heart_rate'),
+        expect.stringContaining('heartrate'),
         expect.any(Object)
       );
     });

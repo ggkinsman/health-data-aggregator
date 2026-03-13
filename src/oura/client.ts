@@ -81,7 +81,7 @@ export class OuraClient {
    * Get heart rate measurements.
    */
   async getHeartRate(query?: DateRangeQuery): Promise<HeartRateResponse> {
-    return this.fetch<HeartRateResponse>('heart_rate', query);
+    return this.fetch<HeartRateResponse>('heartrate', query);
   }
 
   /**

@@ -249,7 +249,9 @@ async function main() {
   console.log('Syncing personal_info...');
   try {
     const info = await client.getPersonalInfo();
-    repo.upsertPersonalInfo(info.data);
+    // API returns personal info directly (not wrapped in { data: ... })
+    const personalData = (info as any).data ?? info;
+    repo.upsertPersonalInfo(personalData);
     repo.updateSyncMetadata('personal_info', today, 1);
     console.log('  OK');
     results.push({ endpoint: 'personal_info', recordCount: 1, success: true });
