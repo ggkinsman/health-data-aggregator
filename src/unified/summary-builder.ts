@@ -180,9 +180,9 @@ function buildDay(db: Database.Database, day: string): DailySummary | null {
     if (avgHrv !== null) sources.add('apple_health');
   }
 
-  // Workouts: Apple Watch + non-overlapping Oura (skip third-party HealthKit sources to avoid dupes)
+  // Workouts: Apple Watch + explicitly-tracked Oura (skip auto-detected walks and third-party dupes)
   const ouraWorkouts = db.prepare(
-    `SELECT raw_json FROM oura_workouts WHERE day = ?`
+    `SELECT raw_json FROM oura_workouts WHERE day = ? AND json_extract(raw_json, '$.activity') != 'walking'`
   ).all(day) as { raw_json: string }[];
 
   const ahWorkouts = db.prepare(

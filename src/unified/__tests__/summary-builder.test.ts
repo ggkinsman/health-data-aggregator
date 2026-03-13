@@ -191,11 +191,11 @@ describe('buildDailySummaries', () => {
     expect(results[0].workout_minutes).toBe(43);
   });
 
-  it('keeps Oura-only workout when no Apple Health workouts exist', () => {
+  it('keeps explicitly-tracked Oura workout when no Apple Watch workouts exist', () => {
     db.prepare(
       `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
     ).run('workout-oura-only', '2024-06-15', JSON.stringify({
-      activity: 'walking',
+      activity: 'hiking',
       start_datetime: '2024-06-15T12:00:00+00:00',
       end_datetime: '2024-06-15T12:30:00+00:00',
     }));
@@ -206,6 +206,30 @@ describe('buildDailySummaries', () => {
     expect(results[0].workout_count).toBe(1);
     expect(results[0].workout_minutes).toBe(30);
     expect(results[0].sources).toBe('oura');
+  });
+
+  it('excludes Oura auto-detected walks from workout count', () => {
+    db.prepare(
+      `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
+    ).run('workout-auto-walk', '2024-06-15', JSON.stringify({
+      activity: 'walking',
+      start_datetime: '2024-06-15T12:00:00+00:00',
+      end_datetime: '2024-06-15T12:30:00+00:00',
+    }));
+
+    db.prepare(
+      `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
+    ).run('workout-real', '2024-06-15', JSON.stringify({
+      activity: 'running',
+      start_datetime: '2024-06-15T07:00:00+00:00',
+      end_datetime: '2024-06-15T07:45:00+00:00',
+    }));
+
+    const results = buildDailySummaries(db);
+
+    expect(results.length).toBe(1);
+    expect(results[0].workout_count).toBe(1);
+    expect(results[0].workout_minutes).toBe(45);
   });
 
   it('only counts Apple Watch workouts from HealthKit, ignoring third-party sources', () => {
@@ -234,7 +258,7 @@ describe('buildDailySummaries', () => {
     db.prepare(
       `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
     ).run('workout-no-times', '2024-06-15', JSON.stringify({
-      activity: 'walking',
+      activity: 'cycling',
     }));
 
     db.prepare(
