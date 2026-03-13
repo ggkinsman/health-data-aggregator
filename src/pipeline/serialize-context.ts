@@ -1,4 +1,4 @@
-import type { DataContext, DaySnapshot, Anomaly } from './types.js';
+import type { DataContext, DaySnapshot } from './types.js';
 
 export function serializeContext(ctx: DataContext): string {
   const sections: string[] = [];
