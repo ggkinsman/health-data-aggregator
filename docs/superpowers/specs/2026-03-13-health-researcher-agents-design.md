@@ -73,8 +73,9 @@ The main voice the user interacts with. A health researcher who specializes in l
 4. Statistical Analyst reviews draft + raw data context
 5. Sleep Specialist reviews draft + sleep/respiratory data subset
 6. Biomarker Specialist reviews draft + activity/cardiovascular/blood panel subset
-7. Hayden receives all three reviews, revises, and delivers final output
-8. Session memory updated with key findings and open questions
+7. Hayden receives all three reviews, revises, and produces final draft
+8. Self-reflection: orchestrator prompts a coherence/accuracy check on the final draft
+9. Session memory updated with key findings, open questions, and goal progress
 ```
 
 ## Orchestration Architecture
@@ -92,7 +93,7 @@ All data flows in-memory within a single script execution:
 3. **Three reviewer calls (parallel)** — each gets its own system prompt + Hayden's draft + relevant data subset as the user message. Returns structured review verdict.
 4. **Hayden revision call** — extends the original Hayden conversation with reviewer feedback appended as a follow-up user message. Returns final output.
 
-Total: **5 API calls per pipeline run** (1 draft + 3 parallel reviews + 1 revision).
+Total: **6 API calls per pipeline run** (1 draft + 3 parallel reviews + 1 revision + 1 self-reflection).
 
 ### Entry Points
 
@@ -203,7 +204,27 @@ During the draft phase, Hayden can include SQL queries or simple TypeScript stat
 2. Runs them against the SQLite database in a sandboxed context (read-only, no writes)
 3. Appends the results back into Hayden's draft before sending to reviewers
 
-This does **not** add an extra API call. Code execution happens between the draft call and the reviewer calls — the orchestrator extracts code from Hayden's response, executes it locally, and staples the results onto the draft. Reviewers see both Hayden's narrative and the raw query results. Hayden then interprets the full picture (draft + code results + reviewer feedback) during the revision call. The total remains **5 API calls**.
+Code execution happens between the draft call and the reviewer calls — the orchestrator extracts code from Hayden's response, executes it locally, and staples the results onto the draft. Reviewers see both Hayden's narrative and the raw query results. Hayden then interprets the full picture (draft + code results + reviewer feedback) during the revision call.
+
+### Code Retry Loop
+
+If a code block fails (SQL error, timeout, empty result set):
+
+1. The orchestrator captures the error message
+2. Re-prompts Hayden with: "Your query failed with: [error]. Please fix and resubmit."
+3. Up to **2 retries** per code block. If all retries fail, Hayden proceeds without code results and notes the limitation in the draft.
+
+This mirrors PHA's iterative code execution approach (75.5% first-attempt → 79% after retries).
+
+### Code Result Validation
+
+Before stapling results onto the draft, the orchestrator performs basic sanity checks:
+
+- **Not empty:** If a query returns zero rows for a time range that should have data, flag it
+- **No SQL errors:** Parse for error messages in the output
+- **Reasonable bounds:** If a numeric result is wildly outside expected ranges (e.g., negative sleep hours, HR > 300), flag it
+
+Flagged results are still included but marked with a warning so the Statistical Analyst can investigate.
 
 ### When To Use Code Execution
 
@@ -279,6 +300,17 @@ A lightweight JSON file (`reports/memory.json`) maintains continuity between int
   "userConcerns": [
     "Interested in HRV trends around travel"
   ],
+  "goals": [
+    {
+      "goal": "Improve deep sleep percentage",
+      "setDate": "2026-03-10",
+      "status": "active",
+      "baselineValue": "16% deep sleep (30-day avg)",
+      "targetValue": "20%+ deep sleep",
+      "lastChecked": "2026-03-13",
+      "progress": "Currently at 14% — trending down, not toward target"
+    }
+  ],
   "baselineSnapshots": {
     "restingHR_90day": 54,
     "hrvMean_90day": 42,
@@ -290,8 +322,9 @@ A lightweight JSON file (`reports/memory.json`) maintains continuity between int
 ### How It's Used
 
 - **Interactive mode:** Memory is loaded into Hayden's context at the start of each pipeline run. Hayden can reference prior findings ("Last week I noted your deep sleep was declining — it's continued this week") and track open questions.
-- **Automated mode:** After each report, the pipeline updates memory with new findings and marks resolved questions.
-- **Pruning:** Findings older than 90 days with status "resolved" are automatically archived. Memory file stays small.
+- **Automated mode:** After each report, the pipeline updates memory with new findings, marks resolved questions, and updates goal progress.
+- **Goal tracking:** Hayden is not a coach — no motivational interviewing, no SMART goal frameworks. But when you express a health goal ("I want to improve my deep sleep"), Hayden records it and references it naturally in future analyses. Weekly reports include a brief goal progress check. Goals can be added, updated, or removed by the user at any time.
+- **Pruning:** Findings older than 90 days with status "resolved" are automatically archived. Goals with status "achieved" or "abandoned" are archived after 30 days. Memory file stays small.
 - **Concurrency:** The pipeline acquires a simple file lock (`reports/memory.lock`) before reading/writing `memory.json`. If the lock is held (e.g., automated report running while interactive query starts), the second process skips the memory update rather than blocking. Stale baselines in memory are non-authoritative — they're refreshed from the data context builder each run.
 
 ## Structured Output Formats
@@ -365,11 +398,50 @@ This turns the system into a research partner that generates its own hypotheses.
 - **Default:** Reviews happen behind the scenes. User sees only Hayden's final output.
 - **On-demand:** User can ask "show me the review" to see all three reviewer verdicts and reasoning for any insight.
 
+## Self-Reflection
+
+Inspired by PHA's orchestrator self-query reflection. After Hayden produces the revised final draft (step 7), the orchestrator runs one additional check before delivering to the user.
+
+### How It Works
+
+A lightweight Haiku call receives Hayden's final output and checks for:
+
+- **Internal consistency:** Do the numbers in the narrative match the numbers in the data section?
+- **Claim drift:** Did the revision introduce claims not supported by the original data or reviewer feedback?
+- **Safety compliance:** Does the output follow all safety guardrails (no diagnosis, appropriate caveats)?
+- **Coherence:** Does the output read clearly, or did the revision create contradictions?
+
+### Output
+
+```markdown
+## Self-Reflection
+- Consistent: yes / no — [details if no]
+- Claim drift: none / [flagged claims]
+- Safety compliant: yes / no — [details if no]
+- Action: ✅ deliver / 🔄 revise [specific fix needed]
+```
+
+If the reflection flags an issue, the orchestrator appends the feedback to Hayden's conversation and requests a targeted fix (1 additional API call, max once). If the fix still fails, deliver with a caveat note.
+
+This adds **1 API call** (Haiku, cheap) to the pipeline. Total is now **6 API calls** per run. Estimated cost increase: ~$0.001 per run.
+
 ## Operational Modes
 
 ### Interactive (Claude Code)
 
-User asks a question → orchestration script chains: Hayden drafts → 3 reviewers evaluate → Hayden revises → user sees final output.
+User asks a question → orchestration script chains: Hayden drafts → 3 reviewers evaluate → Hayden revises → self-reflection → user sees final output.
+
+**Multi-turn conversations:** The interactive pipeline supports follow-up questions within the same session. After the first query completes, the user can ask follow-ups that build on the prior context:
+
+```
+$ npm run health:ask -- "why was my sleep bad last week?"
+[Hayden's analysis...]
+
+$ npm run health:ask -- "what about the week before?" --continue
+[Hayden's follow-up, referencing the prior analysis...]
+```
+
+The `--continue` flag tells the orchestrator to include the previous query's final output as conversation context for the new Hayden draft call. This enables natural conversational threading without re-running the full data context builder. The `--continue` context is ephemeral (current terminal session only) — long-term continuity is handled by session memory.
 
 ### Automated (Periodic Reports)
 
@@ -384,13 +456,14 @@ The script assembles the data context, runs the full pipeline, and outputs a mar
 
 - **Hayden (researcher):** Sonnet or Opus — needs strong reasoning and natural communication
 - **Reviewers:** Haiku — focused verification tasks, lower token cost
-- Each report = **5 API calls** (1 Hayden draft + 3 parallel reviews + 1 Hayden revision). Prompt caching on the revision call reduces cost since it shares context with the draft.
+- Each report = **6 API calls** (1 Hayden draft + 3 parallel reviews + 1 Hayden revision + 1 self-reflection). Prompt caching on the revision call reduces cost since it shares context with the draft.
 
 ### Estimated Cost Per Run
 
 Assuming ~4K tokens data context, ~1K token responses per agent:
 - **Hayden (Sonnet):** ~$0.02-0.04 per run (draft + revision)
 - **3x Reviewers (Haiku):** ~$0.003 total
+- **Self-reflection (Haiku):** ~$0.001
 - **Per daily report:** ~$0.03-0.05
 - **Per week (7 daily + 1 weekly):** ~$0.30-0.50
 - **Monthly estimate:** ~$1.50-2.50
