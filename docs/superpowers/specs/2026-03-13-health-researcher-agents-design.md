@@ -201,7 +201,9 @@ During the draft phase, Hayden can include SQL queries or simple TypeScript stat
 
 1. Extracts code blocks tagged as `executable` from Hayden's draft
 2. Runs them against the SQLite database in a sandboxed context (read-only, no writes)
-3. Appends the results back to Hayden's context for the revision call
+3. Appends the results back into Hayden's draft before sending to reviewers
+
+This does **not** add an extra API call. Code execution happens between the draft call and the reviewer calls — the orchestrator extracts code from Hayden's response, executes it locally, and staples the results onto the draft. Reviewers see both Hayden's narrative and the raw query results. Hayden then interprets the full picture (draft + code results + reviewer feedback) during the revision call. The total remains **5 API calls**.
 
 ### When To Use Code Execution
 
@@ -290,6 +292,7 @@ A lightweight JSON file (`reports/memory.json`) maintains continuity between int
 - **Interactive mode:** Memory is loaded into Hayden's context at the start of each pipeline run. Hayden can reference prior findings ("Last week I noted your deep sleep was declining — it's continued this week") and track open questions.
 - **Automated mode:** After each report, the pipeline updates memory with new findings and marks resolved questions.
 - **Pruning:** Findings older than 90 days with status "resolved" are automatically archived. Memory file stays small.
+- **Concurrency:** The pipeline acquires a simple file lock (`reports/memory.lock`) before reading/writing `memory.json`. If the lock is held (e.g., automated report running while interactive query starts), the second process skips the memory update rather than blocking. Stale baselines in memory are non-authoritative — they're refreshed from the data context builder each run.
 
 ## Structured Output Formats
 
