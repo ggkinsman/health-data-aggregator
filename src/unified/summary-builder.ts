@@ -186,7 +186,7 @@ function buildDay(db: Database.Database, day: string): DailySummary | null {
   ).all(day) as { raw_json: string }[];
 
   const ahWorkouts = db.prepare(
-    `SELECT start_date, end_date, duration FROM apple_health_workouts WHERE DATE(start_date) = ?`
+    `SELECT start_date, end_date, duration FROM apple_health_workouts WHERE DATE(start_date) = ? AND source_name != 'Oura'`
   ).all(day) as { start_date: string; end_date: string; duration: number | null }[];
 
   // Parse AH time intervals for overlap checking

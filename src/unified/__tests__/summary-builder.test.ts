@@ -208,6 +208,34 @@ describe('buildDailySummaries', () => {
     expect(results[0].sources).toBe('oura');
   });
 
+  it('excludes Oura-synced workouts from Apple Health to avoid triple-counting', () => {
+    // Oura syncs workouts into HealthKit — these show up in apple_health_workouts with source_name='Oura'
+    db.prepare(
+      `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
+    ).run('workout-oura-synced', '2024-06-15', JSON.stringify({
+      activity: 'walking',
+      start_datetime: '2024-06-15T12:00:00+00:00',
+      end_datetime: '2024-06-15T12:30:00+00:00',
+    }));
+
+    // Same workout synced into Apple Health by Oura app
+    db.prepare(
+      `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run('HKWorkoutActivityTypeWalking', 'Oura', '2024-06-15T12:00:00.000Z', '2024-06-15T12:30:00.000Z', 30, '{}');
+
+    // A real Apple Watch workout
+    db.prepare(
+      `INSERT INTO apple_health_workouts (activity_type, source_name, start_date, end_date, duration, raw_json) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run('HKWorkoutActivityTypeYoga', 'Watch', '2024-06-15T18:00:00.000Z', '2024-06-15T18:30:00.000Z', 30, '{}');
+
+    const results = buildDailySummaries(db);
+
+    expect(results.length).toBe(1);
+    // Oura-synced AH record excluded, Oura workout deduped against real AH → only Watch yoga + Oura walk kept
+    expect(results[0].workout_count).toBe(2);
+    expect(results[0].workout_minutes).toBe(60);
+  });
+
   it('keeps Oura workout when timestamps are missing (cannot prove overlap)', () => {
     db.prepare(
       `INSERT INTO oura_workouts (id, day, raw_json) VALUES (?, ?, ?)`
