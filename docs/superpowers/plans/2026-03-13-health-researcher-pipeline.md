@@ -97,8 +97,10 @@ export interface DataContext {
   shortTerm: DaySnapshot[];      // last 3 days
   mediumTerm: TrendSummary;      // last 30 days
   longTerm: MonthlyAverage[];    // last 6 months
+  yearOverYear: YearOverYearComparison[];  // same-month comparisons
   anomalies: Anomaly[];
   sourceCoverage: SourceCoverage;
+  staleness: { lastSyncAt: string | null; isStale: boolean };  // >48h = stale
 }
 
 export interface DaySnapshot {
@@ -156,6 +158,12 @@ export interface SourceCoverage {
   oura: { earliest: string | null; latest: string | null };
   appleHealth: { earliest: string | null; latest: string | null };
   cpap: { earliest: string | null; latest: string | null };
+}
+
+export interface YearOverYearComparison {
+  month: string;       // YYYY-MM (current year)
+  priorMonth: string;  // YYYY-MM (prior year)
+  metrics: Record<string, { current: number | null; prior: number | null; changePercent: number | null }>;
 }
 
 // --- Pipeline ---
@@ -467,6 +475,7 @@ import type {
   TrendSummary,
   TrendMetric,
   MonthlyAverage,
+  YearOverYearComparison,
   Anomaly,
   SourceCoverage,
 } from './types.js';
@@ -491,10 +500,12 @@ export function buildDataContext(
   const shortTerm = getShortTerm(db, today, shortTermDays);
   const mediumTerm = getMediumTerm(db, today, mediumTermDays);
   const longTerm = getLongTerm(db, today, longTermMonths);
+  const yearOverYear = getYearOverYear(db, today);
   const anomalies = getAnomalies(db, today);
   const sourceCoverage = getSourceCoverage(db);
+  const staleness = getStaleness(db);
 
-  return { timeRange, shortTerm, mediumTerm, longTerm, anomalies, sourceCoverage };
+  return { timeRange, shortTerm, mediumTerm, longTerm, yearOverYear, anomalies, sourceCoverage, staleness };
 }
 
 function getTimeRange(db: Database.Database): { earliest: string; latest: string } {
@@ -684,6 +695,66 @@ function getSourceCoverage(db: Database.Database): SourceCoverage {
   };
 }
 
+function getYearOverYear(db: Database.Database, today: string): YearOverYearComparison[] {
+  const currentMonth = today.substring(0, 7); // YYYY-MM
+  const currentYear = parseInt(today.substring(0, 4));
+  const priorYear = currentYear - 1;
+  const priorMonth = `${priorYear}${today.substring(4, 7)}`;
+
+  const metricCols = [
+    { name: 'avgSleepMinutes', col: 'total_sleep_minutes' },
+    { name: 'avgHrv', col: 'avg_hrv' },
+    { name: 'avgRestingHr', col: 'avg_resting_hr' },
+    { name: 'avgSteps', col: 'steps' },
+  ];
+
+  const results: YearOverYearComparison[] = [];
+
+  // Only compare if we have prior year data
+  const priorCount = db.prepare(
+    `SELECT COUNT(*) AS cnt FROM daily_summary WHERE strftime('%Y-%m', day) = ?`
+  ).get(priorMonth) as { cnt: number };
+
+  if (priorCount.cnt === 0) return results;
+
+  const metrics: Record<string, { current: number | null; prior: number | null; changePercent: number | null }> = {};
+
+  for (const m of metricCols) {
+    const curr = db.prepare(
+      `SELECT AVG(${m.col}) AS val FROM daily_summary WHERE strftime('%Y-%m', day) = ? AND ${m.col} IS NOT NULL`
+    ).get(currentMonth) as { val: number | null };
+
+    const prior = db.prepare(
+      `SELECT AVG(${m.col}) AS val FROM daily_summary WHERE strftime('%Y-%m', day) = ? AND ${m.col} IS NOT NULL`
+    ).get(priorMonth) as { val: number | null };
+
+    let changePercent: number | null = null;
+    if (curr.val !== null && prior.val !== null && prior.val !== 0) {
+      changePercent = +((curr.val - prior.val) / Math.abs(prior.val) * 100).toFixed(1);
+    }
+
+    metrics[m.name] = {
+      current: curr.val ? +curr.val.toFixed(1) : null,
+      prior: prior.val ? +prior.val.toFixed(1) : null,
+      changePercent,
+    };
+  }
+
+  results.push({ month: currentMonth, priorMonth, metrics });
+  return results;
+}
+
+function getStaleness(db: Database.Database): { lastSyncAt: string | null; isStale: boolean } {
+  const row = db.prepare(
+    `SELECT MAX(last_synced_at) AS last FROM sync_metadata`
+  ).get() as { last: string | null };
+
+  if (!row.last) return { lastSyncAt: null, isStale: true };
+
+  const hoursSince = (Date.now() - new Date(row.last).getTime()) / 3600000;
+  return { lastSyncAt: row.last, isStale: hoursSince > 48 };
+}
+
 function offsetDay(base: string, offset: number): string {
   const d = new Date(base);
   d.setDate(d.getDate() + offset);
@@ -694,7 +765,7 @@ function offsetDay(base: string, offset: number): string {
 - [ ] **Step 2: Run tests**
 
 Run: `npx vitest run src/pipeline/__tests__/data-context-builder.test.ts`
-Expected: All 7 tests PASS
+Expected: All tests PASS
 
 - [ ] **Step 3: Commit**
 
@@ -1301,6 +1372,9 @@ import type Database from 'better-sqlite3';
 import type { CodeResult } from './types.js';
 
 const WRITE_PATTERN = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|REPLACE)\b/i;
+// Note: timeout is checked post-execution, not enforced mid-query.
+// better-sqlite3 runs synchronously so we can't kill a running query.
+// In practice, queries against local SQLite data complete in <100ms.
 const TIMEOUT_MS = 5000;
 
 export function extractExecutableBlocks(text: string): string[] {
@@ -1754,6 +1828,25 @@ export async function runPipeline(
   const modelResearcher = config.modelResearcher ?? 'claude-sonnet-4-6';
   const modelReviewer = config.modelReviewer ?? 'claude-haiku-4-5-20251001';
 
+  // Retry wrapper for API calls (exponential backoff: 1s, 3s)
+  async function callWithRetry<T>(
+    fn: () => Promise<T>,
+    label: string,
+    maxRetries = 2,
+  ): Promise<T> {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        const isTransient = err.status === 429 || err.status === 529 || err.status >= 500;
+        if (!isTransient || attempt === maxRetries) throw err;
+        const delayMs = attempt === 0 ? 1000 : 3000;
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+    throw new Error(`${label}: unreachable`);
+  }
+
   // Load memory and prompts
   const memory = loadMemory(memoryPath);
   const researcherPrompt = loadPrompt('hayden-researcher.md');
@@ -1781,13 +1874,21 @@ export async function runPipeline(
     userMessage += `\n\n---\n\n## Previous Analysis\n\n${config.continueContext}`;
   }
 
+  // Add staleness warning to context if data is stale
+  if (dataContext.staleness.isStale) {
+    userMessage += `\n\n---\n\n⚠️ **Data may be stale.** Last sync: ${dataContext.staleness.lastSyncAt ?? 'never'}. Some findings may not reflect your most recent data.`;
+  }
+
   // Step 1: Hayden draft
-  const draftResponse = await client.messages.create({
-    model: modelResearcher,
-    max_tokens: 4096,
-    system: researcherPrompt,
-    messages: [{ role: 'user', content: userMessage }],
-  });
+  const draftResponse = await callWithRetry(
+    () => client.messages.create({
+      model: modelResearcher,
+      max_tokens: 4096,
+      system: researcherPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    }),
+    'researcher-draft',
+  );
   const draftText = extractText(draftResponse);
   trackUsage(tokenUsage, 'researcher-draft', draftResponse.usage);
 
@@ -1863,18 +1964,22 @@ export async function runPipeline(
     const dataSubset = buildReviewerDataSubset(role, contextText);
 
     try {
-      const response = await client.messages.create({
-        model: modelReviewer,
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: [{
-          role: 'user',
-          content: `## Draft to Review\n\n${enrichedDraft}\n\n---\n\n## Raw Data\n\n${dataSubset}`,
-        }],
-      });
+      const response = await callWithRetry(
+        () => client.messages.create({
+          model: modelReviewer,
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [{
+            role: 'user',
+            content: `## Draft to Review\n\n${enrichedDraft}\n\n---\n\n## Raw Data\n\n${dataSubset}`,
+          }],
+        }),
+        `reviewer-${role}`,
+      );
       trackUsage(tokenUsage, `reviewer-${role}`, response.usage);
       return parseReviewVerdict(role, extractText(response));
     } catch (err: any) {
+      // Partial review fallback — pipeline continues with available reviews
       return {
         role,
         verdict: 'confirmed' as const,
@@ -1892,16 +1997,19 @@ export async function runPipeline(
     `## Review: ${r.role}\n- Verdict: ${r.verdict}\n- Notes: ${r.notes}\n- Suggested edit: ${r.suggestedEdit ?? 'None'}`
   ).join('\n\n');
 
-  const revisionResponse = await client.messages.create({
-    model: modelResearcher,
-    max_tokens: 4096,
-    system: researcherPrompt,
-    messages: [
-      { role: 'user', content: userMessage },
-      { role: 'assistant', content: enrichedDraft },
-      { role: 'user', content: `## Reviewer Feedback\n\n${reviewFeedback}\n\nPlease revise your analysis incorporating this feedback. Produce the final output for the user.` },
-    ],
-  });
+  const revisionResponse = await callWithRetry(
+    () => client.messages.create({
+      model: modelResearcher,
+      max_tokens: 4096,
+      system: researcherPrompt,
+      messages: [
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: enrichedDraft },
+        { role: 'user', content: `## Reviewer Feedback\n\n${reviewFeedback}\n\nPlease revise your analysis incorporating this feedback. Produce the final output for the user.` },
+      ],
+    }),
+    'researcher-revision',
+  );
   const revisedText = extractText(revisionResponse);
   trackUsage(tokenUsage, 'researcher-revision', revisionResponse.usage);
 
@@ -1937,9 +2045,46 @@ export async function runPipeline(
     trackUsage(tokenUsage, 'researcher-reflection-fix', fixResponse.usage);
   }
 
-  // Update session memory
-  const updatedMemory = pruneMemory(memory, new Date().toISOString().split('T')[0]);
-  updatedMemory.lastUpdated = new Date().toISOString().split('T')[0];
+  // Update session memory — extract new findings via lightweight LLM call
+  const today = new Date().toISOString().split('T')[0];
+  const updatedMemory = pruneMemory(memory, today);
+  updatedMemory.lastUpdated = today;
+
+  try {
+    const memoryExtractionResponse = await callWithRetry(
+      () => client.messages.create({
+        model: modelReviewer,
+        max_tokens: 512,
+        system: `Extract key findings and open questions from this health analysis. Return JSON only:
+{"findings": [{"insight": "...", "followUp": "..."}], "openQuestions": ["..."]}`,
+        messages: [{ role: 'user', content: finalOutput }],
+      }),
+      'memory-extraction',
+    );
+    trackUsage(tokenUsage, 'memory-extraction', memoryExtractionResponse.usage);
+
+    const extracted = JSON.parse(extractText(memoryExtractionResponse));
+    if (Array.isArray(extracted.findings)) {
+      for (const f of extracted.findings) {
+        updatedMemory.recentFindings.push({
+          date: today,
+          insight: f.insight,
+          status: 'open',
+          followUp: f.followUp ?? '',
+        });
+      }
+    }
+    if (Array.isArray(extracted.openQuestions)) {
+      for (const q of extracted.openQuestions) {
+        if (!updatedMemory.openQuestions.includes(q)) {
+          updatedMemory.openQuestions.push(q);
+        }
+      }
+    }
+  } catch {
+    // Memory enrichment failure is non-fatal — pipeline output still delivered
+  }
+
   saveMemory(memoryPath, updatedMemory);
 
   return {
@@ -1980,12 +2125,29 @@ export function parseReviewVerdict(role: string, text: string): ReviewVerdict {
 }
 
 export function buildReviewerDataSubset(role: string, fullContext: string): string {
-  // Statistician gets everything
+  // Statistician gets full context to verify all claims
   if (role === 'statistician') return fullContext;
 
-  // For other reviewers, include all sections but the full context is small enough
-  // that subsetting adds complexity without much benefit at ~2-4K tokens.
-  // Keep it simple: pass full context to all reviewers.
+  const lines = fullContext.split('\n');
+
+  if (role === 'sleep') {
+    // Keep: headers, sleep data, HRV, anomalies, source coverage
+    return lines.filter(line =>
+      /^##/.test(line) ||
+      /sleep|hrv|rem|deep|eff|temperature|spo2|respiratory|cpap|anomal/i.test(line) ||
+      line.trim() === ''
+    ).join('\n');
+  }
+
+  if (role === 'biomarker') {
+    // Keep: headers, activity, HR, cardiovascular, workout, readiness, blood panel
+    return lines.filter(line =>
+      /^##/.test(line) ||
+      /hr[:\s=]|heart|resting|activity|steps|cal|workout|readiness|blood|biomarker|anomal/i.test(line) ||
+      line.trim() === ''
+    ).join('\n');
+  }
+
   return fullContext;
 }
 
@@ -2098,20 +2260,12 @@ async function main(): Promise<void> {
   console.log('🔬 Dr. Hayden is analyzing your data...\n');
 
   const db = openDatabase(DB_PATH);
-
-  // Check for data staleness
-  const lastSync = db.prepare(
-    `SELECT MAX(last_synced_at) AS last FROM sync_metadata`
-  ).get() as { last: string | null };
-
-  if (lastSync.last) {
-    const hoursSince = (Date.now() - new Date(lastSync.last).getTime()) / 3600000;
-    if (hoursSince > 48) {
-      console.log(`⚠️  Data may be stale (last sync: ${lastSync.last})\n`);
-    }
-  }
-
   const dataContext = buildDataContext(db);
+
+  // Staleness is now embedded in DataContext and passed to Hayden's context
+  if (dataContext.staleness.isStale) {
+    console.log(`⚠️  Data may be stale (last sync: ${dataContext.staleness.lastSyncAt})\n`);
+  }
 
   // Load continue context
   let continueContext: string | undefined;
@@ -2135,6 +2289,8 @@ async function main(): Promise<void> {
 
     // Save for --continue and --show-review
     const { writeFileSync, mkdirSync } = await import('fs');
+    const { dirname } = await import('path');
+    mkdirSync(dirname(CONTINUE_FILE), { recursive: true });
     mkdirSync(resolve(import.meta.dirname, '..', 'reports', 'reviews'), { recursive: true });
     writeFileSync(CONTINUE_FILE, result.finalOutput);
     writeFileSync(
@@ -2216,6 +2372,10 @@ async function main(): Promise<void> {
     console.log('No data available. Run sync first.');
     db.close();
     return;
+  }
+
+  if (dataContext.staleness.isStale) {
+    log(`[${timestamp}] WARNING: Data may be stale (last sync: ${dataContext.staleness.lastSyncAt})`);
   }
 
   const config: PipelineConfig = { reportType };
