@@ -116,6 +116,8 @@ WHERE type = 'HKQuantityTypeIdentifierHeartRate';
 
 Merged workouts with normalized activity types. Activity type normalization uses a TypeScript lookup map since SQLite views cannot call external functions. The view preserves raw types; normalization happens in application code.
 
+Note: Apple Health workout `avg_hr`/`max_hr` are NULL in the view because `WorkoutStatistics` array ordering is not guaranteed — the heart rate statistic may not be at index `[0]`. The summary builder resolves these in TypeScript by filtering the `statistics` array from `raw_json` for `type = 'HKQuantityTypeIdentifierHeartRate'`.
+
 ```sql
 CREATE VIEW IF NOT EXISTS v_unified_workouts AS
 SELECT
@@ -144,8 +146,8 @@ SELECT
   duration AS duration_minutes,
   total_distance AS distance_meters,
   total_energy_burned AS calories,
-  json_extract(raw_json, '$.statistics[0].average') AS avg_hr,
-  json_extract(raw_json, '$.statistics[0].maximum') AS max_hr
+  NULL AS avg_hr,
+  NULL AS max_hr
 FROM apple_health_workouts;
 ```
 
@@ -166,7 +168,7 @@ SELECT
   ROUND(json_extract(raw_json, '$.light_sleep_duration') / 60.0) AS light_sleep_minutes,
   json_extract(raw_json, '$.average_heart_rate') AS avg_hr,
   json_extract(raw_json, '$.average_hrv') AS avg_hrv,
-  score
+  json_extract(raw_json, '$.score') AS score
 FROM oura_sleep_sessions
 
 UNION ALL
@@ -185,10 +187,10 @@ SELECT
   NULL AS score
 FROM apple_health_records
 WHERE type = 'HKCategoryTypeIdentifierSleepAnalysis'
-  AND value = 'HKCategoryValueSleepAnalysisAsleepUnspecified';
+  AND value = 'HKCategoryValueSleepAnalysisInBed';
 ```
 
-Note: Apple Health sleep records have individual stage entries (`AsleepCore`, `AsleepDeep`, `AsleepREM`, `Awake`). The view uses `AsleepUnspecified` as the overall session marker. Stage-level detail is available via direct queries on `apple_health_records` when needed.
+Note: Apple Health sleep data uses `InBed` records as the session boundary (representing the overall time in bed), while stage-level entries (`AsleepCore`, `AsleepDeep`, `AsleepREM`, `Awake`) represent subdivisions within that window. The view uses `InBed` for session-level rollups. The Apple Watch is the primary source for these records. Stage-level detail is available via direct queries on `apple_health_records` when needed.
 
 ### `v_unified_hrv`
 
@@ -228,7 +230,30 @@ export interface AppleHealthRecord {
 }
 ```
 
-Modify `normalizeTimestamp` to also return the raw offset. The parser stores the offset on each matched record. The `apple_health_records` table gets a new column via V3 migration:
+Add a new helper function alongside the existing `normalizeTimestamp`:
+
+```typescript
+export function extractTimezoneOffset(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const match = raw.match(/([+-]\d{4})$/);
+  return match ? match[1] : undefined;
+}
+```
+
+The parser calls `extractTimezoneOffset` on `startDate` and stores the result as `timezoneOffset` on each record. The existing `normalizeTimestamp` signature is unchanged.
+
+The `AppleHealthRepository.upsertRecords` method must be updated to include `timezone_offset` in both the `INSERT OR REPLACE` column list and the bound parameters:
+
+```typescript
+stmt.run(
+  item.type, item.sourceName, item.startDate, item.endDate,
+  item.value ?? null, item.unit ?? null,
+  item.timezoneOffset ?? null,  // new
+  JSON.stringify(item)
+);
+```
+
+The `apple_health_records` table gets a new column via V3 migration:
 
 ```sql
 ALTER TABLE apple_health_records ADD COLUMN timezone_offset TEXT;
@@ -305,7 +330,9 @@ After the Oura sync completes, `scripts/run-sync.sh` calls `build:summaries --da
 
 ## Database Migration (V3)
 
-Add `migrateV3` to `src/db/migrations.ts`, following the existing V1/V2 pattern:
+Add `migrateV3` to `src/db/migrations.ts`, following the existing V1/V2 pattern. Add `if (currentVersion < 3) { migrateV3(db); }` to `runMigrations`, matching the existing conditional chain.
+
+Migration steps:
 
 1. `ALTER TABLE apple_health_records ADD COLUMN timezone_offset TEXT`
 2. `CREATE TABLE IF NOT EXISTS daily_summary (...)`
