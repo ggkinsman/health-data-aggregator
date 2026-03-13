@@ -13,8 +13,8 @@ export class AppleHealthRepository {
   upsertRecords(records: AppleHealthRecord[]): number {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO apple_health_records
-        (type, source_name, start_date, end_date, value, unit, raw_json, synced_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        (type, source_name, start_date, end_date, value, unit, timezone_offset, raw_json, synced_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `);
 
     const upsertMany = this.db.transaction((items: AppleHealthRecord[]) => {
@@ -27,6 +27,7 @@ export class AppleHealthRepository {
           item.endDate,
           item.value ?? null,
           item.unit ?? null,
+          item.timezoneOffset ?? null,
           JSON.stringify(item)
         );
         count++;

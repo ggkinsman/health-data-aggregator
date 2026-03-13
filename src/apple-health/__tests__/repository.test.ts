@@ -71,6 +71,27 @@ describe('AppleHealthRepository', () => {
     });
   });
 
+  it('should store timezone_offset when provided', () => {
+    const records: AppleHealthRecord[] = [
+      {
+        type: 'HKQuantityTypeIdentifierHeartRate',
+        sourceName: 'Watch',
+        startDate: '2024-01-15T13:30:00.000Z',
+        endDate: '2024-01-15T13:30:00.000Z',
+        value: '72',
+        unit: 'count/min',
+        timezoneOffset: '-0500',
+      },
+    ];
+
+    repo.upsertRecords(records);
+
+    const row = db
+      .prepare('SELECT timezone_offset FROM apple_health_records WHERE type = ?')
+      .get('HKQuantityTypeIdentifierHeartRate') as { timezone_offset: string };
+    expect(row.timezone_offset).toBe('-0500');
+    });
+
   describe('upsertWorkouts', () => {
     it('should insert workouts', () => {
       const workouts: AppleHealthWorkout[] = [
