@@ -11,7 +11,9 @@
     "sync:oura": "tsx scripts/sync-oura.ts",
     "auth:oura": "tsx scripts/auth-oura.ts",
     "import:apple": "tsx scripts/import-apple-health.ts",
-    "build:summaries": "tsx scripts/build-summaries.ts"
+    "build:summaries": "tsx scripts/build-summaries.ts",
+    "health:ask": "tsx scripts/health-ask.ts",
+    "health:report": "tsx scripts/health-report.ts"
   },
   "keywords": [
     "health",
@@ -29,6 +31,7 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
     "sax": "^1.5.0"

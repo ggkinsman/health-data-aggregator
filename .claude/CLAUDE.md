@@ -16,8 +16,11 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `src/unified/` — Unified schema: daily summary builder, SQL views, activity type normalization
 - `src/db/` — SQLite database layer, migrations (V1: Oura, V2: Apple Health, V3: unified schema)
 - `src/storage/` — Encrypted token storage
+- `src/pipeline/` — Health researcher multi-agent pipeline (orchestrator, data context, code executor, session memory)
 - `src/cpap/` — CPAP data reader (planned)
-- `scripts/` — CLI scripts (sync-oura, auth-oura, import-apple-health, build-summaries)
+- `scripts/` — CLI scripts (sync-oura, auth-oura, import-apple-health, build-summaries, health-ask, health-report)
+- `prompts/` — Agent system prompts (Dr. Hayden, 3 reviewers, self-reflection, report templates)
+- `reports/` — Generated health reports and session memory (gitignored)
 - `data/` — Local health data storage (gitignored)
 - `docs/plans/` — Implementation plans
 
@@ -29,12 +32,18 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `npm run sync:oura` — Incremental Oura data sync
 - `npm run import:apple` — Import Apple Health XML export
 - `npm run build:summaries` — Build daily summary rollups (use `--days N` to limit)
+- `npm run health:ask -- "question"` — Interactive health data analysis
+- `npm run health:report -- daily|weekly` — Generate automated health report
 
 ## Automated Sync
 - launchd job: `com.health-data-aggregator.oura-sync` (9 AM / 8 PM)
 - Plist: `~/Library/LaunchAgents/com.health-data-aggregator.oura-sync.plist`
 - Logs: `~/Library/Logs/health-data-oura-sync.log`
 - Wrapper: `scripts/run-sync.sh` (also rebuilds last 7 days of daily summaries)
+- launchd job: `com.health-data-aggregator.daily-report` (9:30 AM daily briefing)
+- launchd job: `com.health-data-aggregator.weekly-report` (Sunday 6 PM deep dive)
+- Reports saved to: `reports/daily/` and `reports/weekly/`
+- Pipeline logs: `~/Library/Logs/health-pipeline.log`
 
 ## Oura API Gotchas
 - Heart rate endpoint is `/heartrate` (no underscore), not `/heart_rate`
