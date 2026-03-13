@@ -36,6 +36,8 @@ describe('openDatabase', () => {
     expect(tableNames).toContain('oura_tags');
     expect(tableNames).toContain('oura_personal_info');
     expect(tableNames).toContain('sync_metadata');
+    expect(tableNames).toContain('apple_health_records');
+    expect(tableNames).toContain('apple_health_workouts');
 
     db.close();
   });
@@ -46,7 +48,7 @@ describe('openDatabase', () => {
 
     const db = openDatabase(dbPath);
     const version = db.pragma('user_version', { simple: true });
-    expect(version).toBe(1);
+    expect(version).toBe(2);
     db.close();
   });
 
@@ -59,7 +61,7 @@ describe('openDatabase', () => {
 
     const db2 = openDatabase(dbPath);
     const version = db2.pragma('user_version', { simple: true });
-    expect(version).toBe(1);
+    expect(version).toBe(2);
     db2.close();
   });
 });
