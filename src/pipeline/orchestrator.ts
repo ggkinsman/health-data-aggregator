@@ -16,7 +16,7 @@ import { extractExecutableBlocks, executeCodeBlock, validateResult } from './cod
 import { loadMemory, saveMemory, pruneMemory } from './session-memory.js';
 import type Database from 'better-sqlite3';
 
-const PROMPTS_DIR = join(import.meta.dirname, '..', '..', 'prompts');
+const PROMPTS_DIR = join(process.cwd(), 'prompts');
 const MAX_CODE_RETRIES = 2;
 
 function loadPrompt(filename: string): string {

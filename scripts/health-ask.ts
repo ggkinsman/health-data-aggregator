@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-import { resolve } from 'path';
+import 'dotenv/config';
+import { join, dirname } from 'path';
 import { openDatabase } from '../src/db/database.js';
 import { buildDataContext } from '../src/pipeline/data-context-builder.js';
 import { runPipeline } from '../src/pipeline/orchestrator.js';
 import type { PipelineConfig } from '../src/pipeline/types.js';
 
-const DB_PATH = resolve(import.meta.dirname, '..', 'data', 'health.db');
-const MEMORY_PATH = resolve(import.meta.dirname, '..', 'reports', 'memory.json');
-const CONTINUE_FILE = resolve(import.meta.dirname, '..', 'reports', '.last-output.txt');
+const DB_PATH = join(process.cwd(), 'data', 'health.db');
+const MEMORY_PATH = join(process.cwd(), 'reports', 'memory.json');
+const CONTINUE_FILE = join(process.cwd(), 'reports', '.last-output.txt');
+const REVIEWS_DIR = join(process.cwd(), 'reports', 'reviews');
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -29,7 +31,7 @@ async function main(): Promise<void> {
   // Handle --show-review: display last review
   if (showReview && !question) {
     const { readFileSync, existsSync } = await import('fs');
-    const reviewPath = resolve(import.meta.dirname, '..', 'reports', 'reviews', 'last-interactive.json');
+    const reviewPath = join(REVIEWS_DIR, 'last-interactive.json');
     if (existsSync(reviewPath)) {
       const reviews = JSON.parse(readFileSync(reviewPath, 'utf-8'));
       for (const r of reviews) {
@@ -74,12 +76,11 @@ async function main(): Promise<void> {
 
     // Save for --continue and --show-review
     const { writeFileSync, mkdirSync } = await import('fs');
-    const { dirname } = await import('path');
     mkdirSync(dirname(CONTINUE_FILE), { recursive: true });
-    mkdirSync(resolve(import.meta.dirname, '..', 'reports', 'reviews'), { recursive: true });
+    mkdirSync(REVIEWS_DIR, { recursive: true });
     writeFileSync(CONTINUE_FILE, result.finalOutput);
     writeFileSync(
-      resolve(import.meta.dirname, '..', 'reports', 'reviews', 'last-interactive.json'),
+      join(REVIEWS_DIR, 'last-interactive.json'),
       JSON.stringify(result.reviews, null, 2)
     );
 

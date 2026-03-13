@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-import { resolve } from 'path';
+import 'dotenv/config';
+import { join, resolve } from 'path';
 import { writeFileSync, mkdirSync, appendFileSync } from 'fs';
 import { openDatabase } from '../src/db/database.js';
 import { buildDataContext } from '../src/pipeline/data-context-builder.js';
 import { runPipeline } from '../src/pipeline/orchestrator.js';
 import type { PipelineConfig } from '../src/pipeline/types.js';
 
-const DB_PATH = resolve(import.meta.dirname, '..', 'data', 'health.db');
-const MEMORY_PATH = resolve(import.meta.dirname, '..', 'reports', 'memory.json');
-const REPORTS_DIR = resolve(import.meta.dirname, '..', 'reports');
+const DB_PATH = join(process.cwd(), 'data', 'health.db');
+const MEMORY_PATH = join(process.cwd(), 'reports', 'memory.json');
+const REPORTS_DIR = join(process.cwd(), 'reports');
 const LOG_PATH = resolve(process.env.HOME ?? '~', 'Library', 'Logs', 'health-pipeline.log');
 
 async function main(): Promise<void> {
@@ -44,7 +45,7 @@ async function main(): Promise<void> {
     const result = await runPipeline(db, dataContext, config, MEMORY_PATH);
 
     // Save report
-    const subdir = resolve(REPORTS_DIR, reportType);
+    const subdir = join(REPORTS_DIR, reportType);
     mkdirSync(subdir, { recursive: true });
 
     let filename: string;
@@ -55,14 +56,14 @@ async function main(): Promise<void> {
       filename = `${today.substring(0, 4)}-W${String(weekNum).padStart(2, '0')}.md`;
     }
 
-    const reportPath = resolve(subdir, filename);
+    const reportPath = join(subdir, filename);
     writeFileSync(reportPath, result.finalOutput);
 
     // Save reviews
-    const reviewDir = resolve(REPORTS_DIR, 'reviews');
+    const reviewDir = join(REPORTS_DIR, 'reviews');
     mkdirSync(reviewDir, { recursive: true });
     writeFileSync(
-      resolve(reviewDir, `${today}-${reportType}.json`),
+      join(reviewDir, `${today}-${reportType}.json`),
       JSON.stringify(result.reviews, null, 2)
     );
 
