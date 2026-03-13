@@ -9,7 +9,6 @@ import type {
   CodeResult,
   TokenUsage,
   AgentRole,
-  SessionMemory,
 } from './types.js';
 import type { DataContext } from './types.js';
 import { serializeContext } from './serialize-context.js';
