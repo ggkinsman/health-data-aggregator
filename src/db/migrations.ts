@@ -12,6 +12,9 @@ export function runMigrations(db: Database.Database): void {
   if (currentVersion < 1) {
     migrateV1(db);
   }
+  if (currentVersion < 2) {
+    migrateV2(db);
+  }
 }
 
 /**
@@ -103,5 +106,42 @@ function migrateV1(db: Database.Database): void {
     );
 
     PRAGMA user_version = 1;
+  `);
+}
+
+/**
+ * V2: Apple Health tables - records and workouts from XML exports
+ */
+function migrateV2(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS apple_health_records (
+      type TEXT NOT NULL,
+      source_name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      value TEXT,
+      unit TEXT,
+      raw_json TEXT NOT NULL,
+      synced_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (type, source_name, start_date, end_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_apple_health_records_type ON apple_health_records(type);
+    CREATE INDEX IF NOT EXISTS idx_apple_health_records_start_date ON apple_health_records(start_date);
+
+    CREATE TABLE IF NOT EXISTS apple_health_workouts (
+      activity_type TEXT NOT NULL,
+      source_name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      duration REAL,
+      total_distance REAL,
+      total_energy_burned REAL,
+      raw_json TEXT NOT NULL,
+      synced_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (activity_type, source_name, start_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_apple_health_workouts_start_date ON apple_health_workouts(start_date);
+
+    PRAGMA user_version = 2;
   `);
 }

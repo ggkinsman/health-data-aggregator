@@ -9,7 +9,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "sync:oura": "tsx scripts/sync-oura.ts",
-    "auth:oura": "tsx scripts/auth-oura.ts"
+    "auth:oura": "tsx scripts/auth-oura.ts",
+    "import:apple": "tsx scripts/import-apple-health.ts"
   },
   "keywords": [
     "health",
@@ -21,12 +22,14 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
+    "@types/sax": "^1.2.7",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
-    "dotenv": "^17.3.1"
+    "dotenv": "^17.3.1",
+    "sax": "^1.5.0"
   }
 }
