@@ -45,6 +45,13 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - Reports saved to: `reports/daily/` and `reports/weekly/`
 - Pipeline logs: `~/Library/Logs/health-pipeline.log`
 
+## Workout Deduplication
+- Apple Watch is the trusted HealthKit workout source (`source_name LIKE '%Watch%'`)
+- Third-party HealthKit sources (Peloton, Strava, Oura) are excluded to avoid duplicates
+- Oura auto-detected walks are excluded — only explicitly-tracked Oura activities count
+- Oura workouts that time-overlap with Apple Watch workouts are discarded (Apple Watch wins)
+- Oura workouts without timestamps are kept (can't prove overlap)
+
 ## Oura API Gotchas
 - Heart rate endpoint is `/heartrate` (no underscore), not `/heart_rate`
 - `/personal_info` returns data directly (not wrapped in `{ data: ... }` like other endpoints)

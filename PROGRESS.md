@@ -17,6 +17,8 @@
 - ✅ Health researcher multi-agent pipeline (Dr. Hayden + 3 reviewers + self-reflection) (2026-03-13)
 - ✅ Automated daily (9:30 AM) and weekly (Sunday 6 PM) health reports via launchd (2026-03-13)
 
+- ✅ Workout deduplication: Apple Watch > Oura priority, excludes auto-walks and third-party HealthKit dupes (2026-03-13)
+
 ## In Progress
 - CPAP/OSCAR integration — blocked on prerequisites (see docs/plans/cpap-oscar-integration.md)
   - Waiting on: SD card purchase, HIPAA data requests sent 2026-03-12
