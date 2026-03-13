@@ -134,7 +134,7 @@ reports/
 
 - Reports are date-stamped markdown files
 - Reviewer verdicts are saved as JSON alongside each report for on-demand viewing
-- Historical reports are queryable — Hayden can reference past reports when answering interactive questions
+- Historical reports are queryable — future enhancement: Hayden could reference past reports when answering interactive questions (deferred to implementation)
 
 ### Delivery
 
