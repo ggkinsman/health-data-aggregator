@@ -14,6 +14,8 @@
 - ✅ Workflow documentation setup (.clinerules, .cursorrules, PROMPTS.md, issue templates)
 - ✅ Apple Health XML parser: SAX streaming, V2 migration, 16 tests, `npm run import:apple` (2026-03-12)
 - ✅ First Apple Health import: 1,478,425 records (1.3M HR, 105K sleep, 22K HRV, 2.6K resting HR, 2.7K workouts) (2026-03-12)
+- ✅ Health researcher multi-agent pipeline (Dr. Hayden + 3 reviewers + self-reflection) (2026-03-13)
+- ✅ Automated daily (9:30 AM) and weekly (Sunday 6 PM) health reports via launchd (2026-03-13)
 
 ## In Progress
 - CPAP/OSCAR integration — blocked on prerequisites (see docs/plans/cpap-oscar-integration.md)
@@ -22,8 +24,7 @@
 ## Next Up
 - ⏭️ CPAP/OSCAR reader (once SD card + OSCAR setup complete)
 - ⏭️ Historical CPAP data parser (if HIPAA request returns CSV/Excel)
-- ⏭️ Define unified health data schema
-- ⏭️ Create data aggregation/merging logic
+- ⏭️ Function Health blood panel integration
 
 ## Key Decisions
 - Using TypeScript (switched from initial Python plan)
