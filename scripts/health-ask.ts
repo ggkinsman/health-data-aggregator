@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { join, dirname } from 'path';
 import { openDatabase } from '../src/db/database.js';
 import { buildDataContext } from '../src/pipeline/data-context-builder.js';
-import { runPipeline } from '../src/pipeline/orchestrator.js';
+import { runPipeline, estimateCost } from '../src/pipeline/orchestrator.js';
 import type { PipelineConfig } from '../src/pipeline/types.js';
 
 const DB_PATH = join(process.cwd(), 'data', 'health.db');
@@ -86,7 +86,8 @@ async function main(): Promise<void> {
 
     // Print stats
     console.log(`\n---`);
-    console.log(`Duration: ${(result.durationMs / 1000).toFixed(1)}s | Tokens: ${result.tokenUsage.totalInput + result.tokenUsage.totalOutput}`);
+    const cost = estimateCost(result.tokenUsage, 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001');
+    console.log(`Duration: ${(result.durationMs / 1000).toFixed(1)}s | Tokens: ${result.tokenUsage.totalInput + result.tokenUsage.totalOutput} | Est. cost: $${cost.toFixed(3)}`);
     if (showReview) {
       for (const r of result.reviews) {
         console.log(`\n--- ${r.role} (${r.verdict}) ---`);

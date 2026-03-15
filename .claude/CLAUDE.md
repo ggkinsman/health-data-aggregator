@@ -32,7 +32,7 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `npm run sync:oura` — Incremental Oura data sync
 - `npm run import:apple` — Import Apple Health XML export
 - `npm run build:summaries` — Build daily summary rollups (use `--days N` to limit)
-- `npm run health:ask -- "question"` — Interactive health data analysis
+- `npm run health:ask -- "question"` — Interactive health data analysis (flags: `--continue`, `--show-review`)
 - `npm run health:report -- daily|weekly` — Generate automated health report
 
 ## Automated Sync
@@ -51,6 +51,14 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - Oura auto-detected walks are excluded — only explicitly-tracked Oura activities count
 - Oura workouts that time-overlap with Apple Watch workouts are discarded (Apple Watch wins)
 - Oura workouts without timestamps are kept (can't prove overlap)
+
+## Pipeline Cost Guardrails
+- Token budget: 50,000 tokens per run (default) — pipeline aborts if exceeded
+- Override via `maxTokenBudget` in PipelineConfig
+- Cost estimate shown after each run (based on Sonnet/Haiku pricing)
+- Estimated cost: ~$0.05–0.15 per interactive query, ~$2–5/month with scheduled reports
+- Uses Anthropic API credits (ANTHROPIC_API_KEY in .env), not Claude Max subscription
+- Model pricing defined in `src/pipeline/orchestrator.ts` — update if models change
 
 ## Oura API Gotchas
 - Heart rate endpoint is `/heartrate` (no underscore), not `/heart_rate`

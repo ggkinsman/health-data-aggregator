@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseReviewVerdict, buildReviewerDataSubset } from '../orchestrator.js';
+import { parseReviewVerdict, buildReviewerDataSubset, estimateCost } from '../orchestrator.js';
 
 describe('parseReviewVerdict', () => {
   it('parses a well-formatted review', () => {
@@ -62,5 +62,27 @@ Data range: 2025-12-01 to 2026-03-13
     const subset = buildReviewerDataSubset('biomarker', fullContext);
     expect(subset).toContain('HR');
     expect(subset).toContain('Activity');
+  });
+});
+
+describe('estimateCost', () => {
+  it('estimates cost based on model pricing', () => {
+    const usage = {
+      totalInput: 10000,
+      totalOutput: 2000,
+      byCaller: {
+        'researcher-draft': { input: 5000, output: 1000 },
+        'reviewer-statistician': { input: 3000, output: 500 },
+        'self-reflection': { input: 2000, output: 500 },
+      },
+    };
+
+    const cost = estimateCost(usage, 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001');
+    // Sonnet: (5000 * 3 + 1000 * 15) / 1M = 0.030
+    // Haiku reviewers: (3000 * 0.8 + 500 * 4) / 1M = 0.0044
+    // Haiku reflection: (2000 * 0.8 + 500 * 4) / 1M = 0.0036
+    // Total: ~0.038
+    expect(cost).toBeGreaterThan(0.03);
+    expect(cost).toBeLessThan(0.05);
   });
 });

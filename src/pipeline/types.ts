@@ -87,6 +87,7 @@ export interface PipelineConfig {
   showReview?: boolean;
   modelResearcher?: string;
   modelReviewer?: string;
+  maxTokenBudget?: number;   // abort pipeline if total tokens exceed this
 }
 
 export interface PipelineResult {

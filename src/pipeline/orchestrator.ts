@@ -18,6 +18,34 @@ import type Database from 'better-sqlite3';
 
 const PROMPTS_DIR = join(process.cwd(), 'prompts');
 const MAX_CODE_RETRIES = 2;
+const DEFAULT_TOKEN_BUDGET = 50_000;
+
+// Per-million-token pricing (USD) as of 2025-05
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'claude-sonnet-4-6': { input: 3, output: 15 },
+  'claude-haiku-4-5-20251001': { input: 0.80, output: 4 },
+};
+
+export function estimateCost(tokenUsage: TokenUsage, modelResearcher: string, modelReviewer: string): number {
+  let totalCost = 0;
+  const researcherPrice = MODEL_PRICING[modelResearcher] ?? MODEL_PRICING['claude-sonnet-4-6'];
+  const reviewerPrice = MODEL_PRICING[modelReviewer] ?? MODEL_PRICING['claude-haiku-4-5-20251001'];
+
+  for (const [caller, usage] of Object.entries(tokenUsage.byCaller)) {
+    const price = caller.startsWith('reviewer-') || caller === 'self-reflection' || caller === 'memory-extraction'
+      ? reviewerPrice
+      : researcherPrice;
+    totalCost += (usage.input * price.input + usage.output * price.output) / 1_000_000;
+  }
+  return totalCost;
+}
+
+class TokenBudgetExceededError extends Error {
+  constructor(used: number, budget: number) {
+    super(`Token budget exceeded: ${used} tokens used, budget was ${budget}. Pipeline stopped to prevent unexpected costs.`);
+    this.name = 'TokenBudgetExceededError';
+  }
+}
 
 function loadPrompt(filename: string): string {
   return readFileSync(join(PROMPTS_DIR, filename), 'utf-8');
@@ -34,6 +62,14 @@ export async function runPipeline(
   const tokenUsage: TokenUsage = { totalInput: 0, totalOutput: 0, byCaller: {} };
   const modelResearcher = config.modelResearcher ?? 'claude-sonnet-4-6';
   const modelReviewer = config.modelReviewer ?? 'claude-haiku-4-5-20251001';
+  const tokenBudget = config.maxTokenBudget ?? DEFAULT_TOKEN_BUDGET;
+
+  function checkBudget(): void {
+    const used = tokenUsage.totalInput + tokenUsage.totalOutput;
+    if (used > tokenBudget) {
+      throw new TokenBudgetExceededError(used, tokenBudget);
+    }
+  }
 
   // Retry wrapper for API calls (exponential backoff: 1s, 3s)
   async function callWithRetry<T>(
@@ -98,6 +134,7 @@ export async function runPipeline(
   );
   const draftText = extractText(draftResponse);
   trackUsage(tokenUsage, 'researcher-draft', draftResponse.usage);
+  checkBudget();
 
   // Step 2: Code execution (if any executable blocks)
   const codeResults: CodeResult[] = [];
@@ -122,6 +159,7 @@ export async function runPipeline(
       });
       const retryText = extractText(retryResponse);
       trackUsage(tokenUsage, `code-retry-${retries}`, retryResponse.usage);
+      checkBudget();
 
       const retryBlocks = extractExecutableBlocks(retryText);
       if (retryBlocks.length > 0) {
@@ -195,6 +233,7 @@ export async function runPipeline(
   });
 
   const reviews = await Promise.all(reviewPromises);
+  checkBudget();
 
   // Step 4: Hayden revision
   const reviewFeedback = reviews.map(r =>
@@ -216,6 +255,7 @@ export async function runPipeline(
   );
   const revisedText = extractText(revisionResponse);
   trackUsage(tokenUsage, 'researcher-revision', revisionResponse.usage);
+  checkBudget();
 
   // Step 5: Self-reflection
   const reflectionPrompt = loadPrompt('self-reflection.md');

@@ -4,7 +4,7 @@ import { join, resolve } from 'path';
 import { writeFileSync, mkdirSync, appendFileSync } from 'fs';
 import { openDatabase } from '../src/db/database.js';
 import { buildDataContext } from '../src/pipeline/data-context-builder.js';
-import { runPipeline } from '../src/pipeline/orchestrator.js';
+import { runPipeline, estimateCost } from '../src/pipeline/orchestrator.js';
 import type { PipelineConfig } from '../src/pipeline/types.js';
 
 const DB_PATH = join(process.cwd(), 'data', 'health.db');
@@ -68,7 +68,8 @@ async function main(): Promise<void> {
     );
 
     log(`[${timestamp}] ${reportType} report saved to ${reportPath}`);
-    log(`[${timestamp}] Duration: ${result.durationMs}ms | Tokens: ${result.tokenUsage.totalInput + result.tokenUsage.totalOutput}`);
+    const cost = estimateCost(result.tokenUsage, 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001');
+    log(`[${timestamp}] Duration: ${result.durationMs}ms | Tokens: ${result.tokenUsage.totalInput + result.tokenUsage.totalOutput} | Est. cost: $${cost.toFixed(3)}`);
 
     console.log(`${reportType} report saved to ${reportPath}`);
   } catch (err: any) {
