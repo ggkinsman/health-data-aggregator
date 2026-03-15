@@ -27,6 +27,9 @@ export function runMigrations(db: Database.Database): void {
   if (currentVersion < 4) {
     migrateV4(db);
   }
+  if (currentVersion < 5) {
+    migrateV5(db);
+  }
 }
 
 /**
@@ -235,4 +238,27 @@ function migrateV4(db: Database.Database): void {
   `);
 
   db.exec('PRAGMA user_version = 4;');
+}
+
+/**
+ * V5: CPAP device settings — tracks pressure range changes over time
+ */
+function migrateV5(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cpap_device_settings (
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      days INTEGER NOT NULL,
+      device TEXT NOT NULL,
+      serial TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      pressure_min REAL NOT NULL,
+      pressure_max REAL NOT NULL,
+      epr TEXT NOT NULL,
+      imported_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (start_date)
+    );
+  `);
+
+  db.exec('PRAGMA user_version = 5;');
 }

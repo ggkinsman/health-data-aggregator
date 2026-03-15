@@ -19,3 +19,19 @@ export interface CPAPSession {
   csr_minutes: number;
   mask_events: number;
 }
+
+/**
+ * A CPAP device settings period — captures when pressure ranges
+ * or modes were changed. Sourced from OSCAR's "Changes to Device Settings" report.
+ */
+export interface CPAPDeviceSettings {
+  start_date: string;       // YYYY-MM-DD — first night with these settings
+  end_date: string;         // YYYY-MM-DD — last night with these settings
+  days: number;
+  device: string;           // e.g. "AirSense 11 AutoSet"
+  serial: string;
+  mode: string;             // e.g. "APAP"
+  pressure_min: number;     // cmH2O
+  pressure_max: number;     // cmH2O
+  epr: string;              // e.g. "Off", "1", "2", "3"
+}

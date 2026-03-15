@@ -20,12 +20,13 @@
 - ✅ Workout deduplication: Apple Watch > Oura priority, excludes auto-walks and third-party HealthKit dupes (2026-03-13)
 - ✅ Pipeline cost guardrails: 50K token budget cap, per-run cost estimates, fixed import.meta.dirname runtime bug (2026-03-13)
 
+- ✅ CPAP database integration: STR.edf parser, V4 migration, import:cpap script, summary-builder CPAP fields — 241 nights imported (2026-03-15)
+- ✅ CPAP device settings table (V5 migration): tracks pressure range changes from OSCAR, 3 settings periods seeded (2026-03-15)
+
 ## In Progress
-- CPAP/OSCAR integration — blocked on prerequisites (see docs/plans/cpap-oscar-integration.md)
-  - Waiting on: SD card purchase, HIPAA data requests sent 2026-03-12
+- Nothing active
 
 ## Next Up
-- ⏭️ CPAP/OSCAR reader (once SD card + OSCAR setup complete)
 - ⏭️ Historical CPAP data parser (if HIPAA request returns CSV/Excel)
 - ⏭️ Function Health blood panel integration
 
@@ -42,4 +43,4 @@
 |--------|--------|--------|
 | Oura Ring | OAuth2 API + incremental sync | ✅ Working |
 | Apple Health | XML export parsing | ✅ 1.48M records imported |
-| CPAP (ResMed AirSense 11) | OSCAR data reader | Blocked on setup |
+| CPAP (ResMed AirSense 11) | STR.edf SD card parser | ✅ 241 nights imported |
