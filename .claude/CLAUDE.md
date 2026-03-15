@@ -7,17 +7,17 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - SQLite (better-sqlite3) for local data storage
 - Oura Cloud API v2 (OAuth2 authentication)
 - Apple Health XML exports (manual for now)
-- CPAP data via OSCAR (planned)
+- CPAP data via OSCAR/STR.edf SD card reader
 - AES-256-GCM encryption for token storage
 
 ## Project Structure
 - `src/oura/` — Oura API client, auth, types (9 endpoints)
 - `src/apple-health/` — Apple Health XML parser, repository, types
 - `src/unified/` — Unified schema: daily summary builder, SQL views, activity type normalization
-- `src/db/` — SQLite database layer, migrations (V1: Oura, V2: Apple Health, V3: unified schema)
+- `src/db/` — SQLite database layer, migrations (V1: Oura, V2: Apple Health, V3: unified schema, V4: CPAP sessions, V5: CPAP device settings)
 - `src/storage/` — Encrypted token storage
 - `src/pipeline/` — Health researcher multi-agent pipeline (orchestrator, data context, code executor, session memory)
-- `src/cpap/` — CPAP data reader (planned)
+- `src/cpap/` — CPAP STR.edf parser, repository, types (CPAPSession, CPAPDeviceSettings)
 - `scripts/` — CLI scripts (sync-oura, auth-oura, import-apple-health, build-summaries, health-ask, health-report)
 - `prompts/` — Agent system prompts (Dr. Hayden, 3 reviewers, self-reflection, report templates)
 - `reports/` — Generated health reports and session memory (gitignored)
@@ -33,7 +33,9 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `npm run import:apple` — Import Apple Health XML export
 - `npm run build:summaries` — Build daily summary rollups (use `--days N` to limit)
 - `npm run health:ask -- "question"` — Interactive health data analysis (flags: `--continue`, `--show-review`)
-- `npm run health:report -- daily|weekly` — Generate automated health report
+- `npm run import:cpap` — Import CPAP data from ResMed SD card STR.edf
+- `npm run health:report -- daily|weekly` — Generate automated health report (uses Anthropic API)
+- `/health-report daily|weekly` — Generate report locally in Claude Code (no API cost, queries SQLite directly)
 
 ## Automated Sync
 - launchd job: `com.health-data-aggregator.oura-sync` (9 AM / 8 PM)
@@ -74,6 +76,16 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - Explain "why" not "what" in comments
 - Manual testing is fine for this solo project
 - Keep the root directory clean
+
+## DoxGPT Verification
+- Report templates include a "Verify with DoxGPT" section generating copy-paste-ready medical fact-check questions
+- Every question must be fully self-contained with patient profile, specific numbers, and the claim being validated
+- Patient context: 32-year-old male, severe OSA (pAHI 50 baseline), on APAP since July 2025
+
+## CPAP Device Settings
+- `cpap_device_settings` table tracks pressure range changes over time
+- Join to sessions: `c.day BETWEEN s.start_date AND s.end_date`
+- Currently 3 settings periods seeded from OSCAR (Jul 2025 – Mar 2026)
 
 ## Security Requirements
 - API tokens and secrets go in `.env` only

@@ -22,6 +22,8 @@
 
 - ✅ CPAP database integration: STR.edf parser, V4 migration, import:cpap script, summary-builder CPAP fields — 241 nights imported (2026-03-15)
 - ✅ CPAP device settings table (V5 migration): tracks pressure range changes from OSCAR, 3 settings periods seeded (2026-03-15)
+- ✅ DoxGPT verification questions added to daily/weekly report templates + Dr. Hayden prompt (2026-03-15)
+- ✅ `/health-report` slash command for local report generation without API costs (2026-03-15)
 
 ## In Progress
 - Nothing active
@@ -36,7 +38,8 @@
 - OAuth2 required (Personal Access Tokens deprecated end of 2025)
 - Manual Apple Health exports for now (no iOS app)
 - SQLite for local data storage with upsert-based sync
-- CPAP data via OSCAR (reads ResMed SD card) — not myAir API
+- CPAP data via OSCAR/STR.edf SD card reader — not myAir API
+- DoxGPT for medical fact-checking of pipeline interpretations (manual copy-paste, no API)
 
 ## Data Sources
 | Source | Method | Status |

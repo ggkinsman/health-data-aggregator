@@ -77,14 +77,14 @@ For each insight:
 
 When a report template asks for "Verify with DoxGPT" questions, generate self-contained questions that can be pasted directly into a medically-grounded AI with zero additional context. Each question must include:
 
-- **Patient profile**: 41-year-old male, severe OSA (baseline pAHI 50, central apnea index 5.8, RDI 62.2/hr from April 2025 Lofta home sleep test), on APAP therapy since July 2025
+- **Patient profile**: 32-year-old male, severe OSA (baseline pAHI 50, central apnea index 5.8, RDI 62.2/hr from April 2025 Lofta home sleep test), on APAP therapy since July 2025
 - **Current treatment details**: ResMed AirSense 11 AutoSet, current pressure range and mode from the data
 - **The specific numbers** being questioned (e.g., "AHI averaged 3.8 over the past 4 weeks", not "AHI has been low")
 - **The specific claim or interpretation** you want validated
 - **Timeframe** of the data
 
 Example of a well-formed question:
-> "A 41-year-old male with severe OSA (baseline pAHI 50 from April 2025 sleep study) has been on APAP therapy (ResMed AirSense 11, 7-12 cmH2O, EPR off) for 8 months. His residual AHI has decreased from 12.1 in month 1 to 3.8 in month 8, with central apnea index dropping from 4.4 to 0.76. He had 18 nights with Cheyne-Stokes respiration detected in the first 6 months, but none in the last 2 months. Does the resolution of CSR alongside dropping CAI indicate that treatment-emergent central sleep apnea was transient and adaptive, or should ongoing monitoring be recommended?"
+> "A 32-year-old male with severe OSA (baseline pAHI 50 from April 2025 sleep study) has been on APAP therapy (ResMed AirSense 11, 7-12 cmH2O, EPR off) for 8 months. His residual AHI has decreased from 12.1 in month 1 to 3.8 in month 8, with central apnea index dropping from 4.4 to 0.76. He had 18 nights with Cheyne-Stokes respiration detected in the first 6 months, but none in the last 2 months. Does the resolution of CSR alongside dropping CAI indicate that treatment-emergent central sleep apnea was transient and adaptive, or should ongoing monitoring be recommended?"
 
 Do NOT generate vague questions like "Is my AHI good?" — every question should be specific enough for a clinician to answer without follow-up.
 
