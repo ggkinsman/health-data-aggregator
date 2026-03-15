@@ -24,6 +24,9 @@ export function runMigrations(db: Database.Database): void {
   if (currentVersion < 3) {
     migrateV3(db);
   }
+  if (currentVersion < 4) {
+    migrateV4(db);
+  }
 }
 
 /**
@@ -196,4 +199,40 @@ function migrateV3(db: Database.Database): void {
   db.exec(VIEW_UNIFIED_HRV);
 
   db.exec('PRAGMA user_version = 3;');
+}
+
+/**
+ * V4: CPAP data — cpap_sessions table + 4 new daily_summary columns
+ */
+function migrateV4(db: Database.Database): void {
+  // ALTER TABLE and PRAGMA user_version must be in separate db.exec calls —
+  // SQLite does not allow mixing DDL and PRAGMA in a single batch.
+  // Note: db.exec is better-sqlite3's SQL execution, not child_process.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cpap_sessions (
+      day TEXT PRIMARY KEY,
+      usage_minutes INTEGER,
+      ahi REAL,
+      oai REAL,
+      cai REAL,
+      hi REAL,
+      uai REAL,
+      rin REAL,
+      mask_pressure_50 REAL,
+      mask_pressure_95 REAL,
+      resp_rate_50 REAL,
+      tidal_vol_50 REAL,
+      min_vent_50 REAL,
+      csr_minutes INTEGER,
+      mask_events INTEGER,
+      imported_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    ALTER TABLE daily_summary ADD COLUMN cpap_pressure_50 REAL;
+    ALTER TABLE daily_summary ADD COLUMN cpap_resp_rate REAL;
+    ALTER TABLE daily_summary ADD COLUMN cpap_cai REAL;
+    ALTER TABLE daily_summary ADD COLUMN cpap_csr_flagged INTEGER;
+  `);
+
+  db.exec('PRAGMA user_version = 4;');
 }
