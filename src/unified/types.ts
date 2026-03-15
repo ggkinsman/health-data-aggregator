@@ -28,9 +28,13 @@ export interface DailySummary {
   workout_count: number | null;
   workout_minutes: number | null;
 
-  // CPAP (future)
+  // CPAP (from cpap_sessions, populated by import:cpap + build:summaries)
   cpap_hours: number | null;
   cpap_ahi: number | null;
+  cpap_pressure_50: number | null;
+  cpap_resp_rate: number | null;
+  cpap_cai: number | null;
+  cpap_csr_flagged: number | null;  // 0 or 1
 
   // Travel / location
   timezone_offset: string | null;
