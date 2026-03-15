@@ -73,5 +73,6 @@ function formatDaySnapshot(d: DaySnapshot): string {
   if (d.avgHrv !== null) lines.push(`  HRV: ${d.avgHrv}`);
   if (d.steps !== null) lines.push(`  Activity: steps=${d.steps} cal=${d.activeCalories}`);
   if (d.workoutCount !== null) lines.push(`  Workouts: ${d.workoutCount}x ${d.workoutMinutes}m`);
+  if (d.tags.length > 0) lines.push(`  Tags: ${d.tags.join(', ')}`);
   return lines.join('\n');
 }

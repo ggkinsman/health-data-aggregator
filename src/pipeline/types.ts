@@ -30,6 +30,7 @@ export interface DaySnapshot {
   activeCalories: number | null;
   workoutCount: number | null;
   workoutMinutes: number | null;
+  tags: string[];             // Oura user tags for this day (e.g. alcohol, magnesium, sauna)
   sources: string;
 }
 

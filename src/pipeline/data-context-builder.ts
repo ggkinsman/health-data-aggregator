@@ -29,6 +29,12 @@ export function buildDataContext(
   const sourceCoverage = getSourceCoverage(db);
   const staleness = getStaleness(db);
 
+  // Enrich short-term snapshots with user tags
+  const tagsByDay = getTagsByDay(db, shortTerm.map(d => d.day));
+  for (const day of shortTerm) {
+    day.tags = tagsByDay[day.day] ?? [];
+  }
+
   return { timeRange, shortTerm, mediumTerm, longTerm, yearOverYear, anomalies, sourceCoverage, staleness };
 }
 
@@ -62,6 +68,7 @@ function getShortTerm(db: Database.Database, today: string, days: number): DaySn
     activeCalories: r.active_calories,
     workoutCount: r.workout_count,
     workoutMinutes: r.workout_minutes,
+    tags: [],
     sources: r.sources,
   }));
 }
@@ -269,6 +276,27 @@ function getStaleness(db: Database.Database): { lastSyncAt: string | null; isSta
 
   const hoursSince = (Date.now() - new Date(row.last).getTime()) / 3600000;
   return { lastSyncAt: row.last, isStale: hoursSince > 48 };
+}
+
+function getTagsByDay(db: Database.Database, days: string[]): Record<string, string[]> {
+  if (days.length === 0) return {};
+
+  const placeholders = days.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT day, json_extract(raw_json, '$.tags') AS tag_json
+    FROM oura_tags
+    WHERE day IN (${placeholders})
+  `).all(...days) as { day: string; tag_json: string }[];
+
+  const result: Record<string, string[]> = {};
+  for (const row of rows) {
+    const tags = JSON.parse(row.tag_json) as string[];
+    // Clean up tag prefixes: "tag_sleep_alcohol" -> "alcohol", "tag_generic_magnesium" -> "magnesium"
+    const cleaned = tags.map(t => t.replace(/^tag_(sleep|generic|activity)_/, ''));
+    if (!result[row.day]) result[row.day] = [];
+    result[row.day].push(...cleaned);
+  }
+  return result;
 }
 
 function offsetDay(base: string, offset: number): string {

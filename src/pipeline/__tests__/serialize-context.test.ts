@@ -23,6 +23,7 @@ describe('serializeContext', () => {
         activeCalories: 450,
         workoutCount: 1,
         workoutMinutes: 35,
+        tags: ['alcohol', 'magnesium'],
         sources: 'apple_health,oura',
       }],
       mediumTerm: { days: 30, metrics: {} },
@@ -41,6 +42,7 @@ describe('serializeContext', () => {
     expect(text).toContain('2026-03-13');
     expect(text).toContain('420');
     expect(text).toContain('oura');
+    expect(text).toContain('Tags: alcohol, magnesium');
   });
 
   it('includes anomaly section when anomalies present', () => {
