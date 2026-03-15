@@ -21,7 +21,7 @@ export function buildDailySummaries(
       avg_resting_hr, min_hr, max_hr, avg_hrv,
       steps, active_calories,
       workout_count, workout_minutes,
-      cpap_hours, cpap_ahi,
+      cpap_hours, cpap_ahi, cpap_pressure_50, cpap_resp_rate, cpap_cai, cpap_csr_flagged,
       timezone_offset, timezone_change, location_label,
       sources, built_at
     ) VALUES (
@@ -30,7 +30,7 @@ export function buildDailySummaries(
       ?, ?, ?, ?,
       ?, ?,
       ?, ?,
-      ?, ?,
+      ?, ?, ?, ?, ?, ?,
       ?, ?, ?,
       ?, ?
     )
@@ -47,6 +47,8 @@ export function buildDailySummaries(
         summary.steps, summary.active_calories,
         summary.workout_count, summary.workout_minutes,
         summary.cpap_hours, summary.cpap_ahi,
+        summary.cpap_pressure_50, summary.cpap_resp_rate,
+        summary.cpap_cai, summary.cpap_csr_flagged,
         summary.timezone_offset, summary.timezone_change, summary.location_label,
         summary.sources, summary.built_at
       );
@@ -78,6 +80,7 @@ function getAllDays(
       UNION SELECT day FROM oura_workouts
       UNION SELECT DATE(start_date) AS day FROM apple_health_records
       UNION SELECT DATE(start_date) AS day FROM apple_health_workouts
+      UNION SELECT day FROM cpap_sessions
     )${dateFilter}
     ORDER BY day
   `).all() as { day: string }[];
@@ -229,6 +232,21 @@ function buildDay(db: Database.Database, day: string): DailySummary | null {
     }
   }
 
+  // CPAP: read nightly summary (written by import:cpap, never by this builder)
+  const cpap = db.prepare(
+    `SELECT usage_minutes, ahi, cai, mask_pressure_50, resp_rate_50, csr_minutes
+     FROM cpap_sessions WHERE day = ?`
+  ).get(day) as {
+    usage_minutes: number;
+    ahi: number;
+    cai: number;
+    mask_pressure_50: number;
+    resp_rate_50: number;
+    csr_minutes: number;
+  } | undefined;
+
+  if (cpap) sources.add('cpap');
+
   // Timezone detection
   const tzRows = db.prepare(`
     SELECT DISTINCT timezone_offset
@@ -265,8 +283,12 @@ function buildDay(db: Database.Database, day: string): DailySummary | null {
     active_calories: activeCalories,
     workout_count: workoutCount > 0 ? workoutCount : null,
     workout_minutes: workoutMinutes > 0 ? +workoutMinutes.toFixed(1) : null,
-    cpap_hours: null,
-    cpap_ahi: null,
+    cpap_hours:       cpap ? +(cpap.usage_minutes / 60).toFixed(2) : null,
+    cpap_ahi:         cpap?.ahi ?? null,
+    cpap_pressure_50: cpap?.mask_pressure_50 ?? null,
+    cpap_resp_rate:   cpap?.resp_rate_50 ?? null,
+    cpap_cai:         cpap?.cai ?? null,
+    cpap_csr_flagged: cpap ? (cpap.csr_minutes > 0 ? 1 : 0) : null,
     timezone_offset: timezoneOffset,
     timezone_change: timezoneChange,
     location_label: existing?.location_label ?? null,
