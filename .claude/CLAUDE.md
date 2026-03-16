@@ -7,17 +7,17 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - SQLite (better-sqlite3) for local data storage
 - Oura Cloud API v2 (OAuth2 authentication)
 - Apple Health XML exports (manual for now)
-- CPAP data via OSCAR/STR.edf SD card reader
+- CPAP data via OSCAR (reads STR.edf from OSCAR's backup directory)
 - AES-256-GCM encryption for token storage
 
 ## Project Structure
 - `src/oura/` — Oura API client, auth, types (9 endpoints)
 - `src/apple-health/` — Apple Health XML parser, repository, types
 - `src/unified/` — Unified schema: daily summary builder, SQL views, activity type normalization
-- `src/db/` — SQLite database layer, migrations (V1: Oura, V2: Apple Health, V3: unified schema, V4: CPAP sessions, V5: CPAP device settings)
+- `src/db/` — SQLite database layer, migrations (V1: Oura, V2: Apple Health, V3: unified schema, V4: CPAP sessions, V5: CPAP device settings, V6: CPAP leak rate)
 - `src/storage/` — Encrypted token storage
 - `src/pipeline/` — Health researcher multi-agent pipeline (orchestrator, data context, code executor, session memory)
-- `src/cpap/` — CPAP STR.edf parser, repository, types (CPAPSession, CPAPDeviceSettings)
+- `src/cpap/` — CPAP EDF parser, repository, types (CPAPSession, CPAPDeviceSettings)
 - `scripts/` — CLI scripts (sync-oura, auth-oura, import-apple-health, build-summaries, health-ask, health-report)
 - `prompts/` — Agent system prompts (Dr. Hayden, 3 reviewers, self-reflection, report templates)
 - `reports/` — Generated health reports and session memory (gitignored)
@@ -33,7 +33,8 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `npm run import:apple` — Import Apple Health XML export
 - `npm run build:summaries` — Build daily summary rollups (use `--days N` to limit)
 - `npm run health:ask -- "question"` — Interactive health data analysis (flags: `--continue`, `--show-review`)
-- `npm run import:cpap` — Import CPAP data from ResMed SD card STR.edf
+- `npm run import:cpap` — Import CPAP data from OSCAR's backup STR.edf
+- `/import-cpap` — Import CPAP data from OSCAR, rebuild summaries, show what's new
 - `npm run health:report -- daily|weekly` — Generate automated health report (uses Anthropic API)
 - `/health-report daily|weekly` — Generate report locally in Claude Code (no API cost, queries SQLite directly)
 

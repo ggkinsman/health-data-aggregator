@@ -17,11 +17,13 @@ export class CpapRepository {
       INSERT OR REPLACE INTO cpap_sessions (
         day, usage_minutes, ahi, oai, cai, hi, uai, rin,
         mask_pressure_50, mask_pressure_95,
+        leak_50, leak_95, leak_max,
         resp_rate_50, tidal_vol_50, min_vent_50,
         csr_minutes, mask_events, imported_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?,
         ?, ?,
+        ?, ?, ?,
         ?, ?, ?,
         ?, ?, datetime('now')
       )
@@ -32,6 +34,7 @@ export class CpapRepository {
         stmt.run(
           s.day, s.usage_minutes, s.ahi, s.oai, s.cai, s.hi, s.uai, s.rin,
           s.mask_pressure_50, s.mask_pressure_95,
+          s.leak_50, s.leak_95, s.leak_max,
           s.resp_rate_50, s.tidal_vol_50, s.min_vent_50,
           s.csr_minutes, s.mask_events
         );

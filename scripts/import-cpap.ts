@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
- * Import CPAP data from ResMed AirSense 11 SD card into SQLite.
+ * Import CPAP data from OSCAR into SQLite.
  *
- * Reads STR.edf from the SD card and upserts nightly summaries into
- * cpap_sessions. Run build:summaries afterward to populate daily_summary.
+ * Reads STR.edf from OSCAR's backup directory and upserts nightly
+ * summaries into cpap_sessions. Upload SD card data to OSCAR first,
+ * then run this script.
  *
  * Usage:
- *   npm run import:cpap                          # uses /Volumes/NO NAME
- *   npm run import:cpap -- "/Volumes/NO NAME"    # explicit path
- *   CPAP_CARD_PATH="/path" npm run import:cpap   # env var
+ *   npm run import:cpap                          # reads from OSCAR
+ *   npm run import:cpap -- "/path/to/STR.edf"    # explicit override
  */
 
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { openDatabase } from '../src/db/database.js';
 import { parseSTREdf } from '../src/cpap/edf-parser.js';
@@ -19,27 +20,31 @@ import { CpapRepository } from '../src/cpap/repository.js';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DATA_DIR, 'health.db');
-const DEFAULT_CARD_PATH = '/Volumes/NO NAME';
+const OSCAR_EDF_PATH = path.join(
+  os.homedir(),
+  'Documents/OSCAR_Data/Profiles/ggkinsman/ResMed_23252139106/Backup/STR.edf'
+);
 
-function resolveCardPath(): string {
-  return process.argv[2] ?? process.env['CPAP_CARD_PATH'] ?? DEFAULT_CARD_PATH;
+function resolveEdfPath(): string {
+  // Explicit path override via CLI arg
+  if (process.argv[2]) {
+    const p = process.argv[2].endsWith('.edf')
+      ? process.argv[2]
+      : path.join(process.argv[2], 'STR.edf');
+    if (fs.existsSync(p)) return p;
+    console.error(`STR.edf not found at: ${p}`);
+    process.exit(1);
+  }
+
+  if (fs.existsSync(OSCAR_EDF_PATH)) return OSCAR_EDF_PATH;
+
+  console.error(`OSCAR STR.edf not found at: ${OSCAR_EDF_PATH}`);
+  console.error('Import your SD card data into OSCAR first, then re-run.');
+  process.exit(1);
 }
 
 async function main() {
-  const cardPath = resolveCardPath();
-  const edfPath = path.join(cardPath, 'STR.edf');
-
-  if (!fs.existsSync(cardPath)) {
-    console.error(`SD card not found at: ${cardPath}`);
-    console.error('Make sure the card is inserted and mounted, then try again.');
-    process.exit(1);
-  }
-
-  if (!fs.existsSync(edfPath)) {
-    console.error(`STR.edf not found at: ${edfPath}`);
-    console.error('The SD card may not have been in the machine long enough to record data.');
-    process.exit(1);
-  }
+  const edfPath = resolveEdfPath();
 
   console.log(`Importing CPAP data from: ${edfPath}`);
 

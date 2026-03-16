@@ -50,7 +50,7 @@ describe('openDatabase', () => {
 
     const db = openDatabase(dbPath);
     const version = db.pragma('user_version', { simple: true });
-    expect(version).toBe(4);
+    expect(version).toBe(6);
     db.close();
   });
 
@@ -63,7 +63,7 @@ describe('openDatabase', () => {
 
     const db2 = openDatabase(dbPath);
     const version = db2.pragma('user_version', { simple: true });
-    expect(version).toBe(4);
+    expect(version).toBe(6);
     db2.close();
   });
 });

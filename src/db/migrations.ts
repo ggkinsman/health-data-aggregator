@@ -30,6 +30,9 @@ export function runMigrations(db: Database.Database): void {
   if (currentVersion < 5) {
     migrateV5(db);
   }
+  if (currentVersion < 6) {
+    migrateV6(db);
+  }
 }
 
 /**
@@ -261,4 +264,14 @@ function migrateV5(db: Database.Database): void {
   `);
 
   db.exec('PRAGMA user_version = 5;');
+}
+
+/**
+ * V6: Add leak rate columns to cpap_sessions (L/min, converted from L/s in STR.edf)
+ */
+function migrateV6(db: Database.Database): void {
+  db.exec('ALTER TABLE cpap_sessions ADD COLUMN leak_50 REAL');
+  db.exec('ALTER TABLE cpap_sessions ADD COLUMN leak_95 REAL');
+  db.exec('ALTER TABLE cpap_sessions ADD COLUMN leak_max REAL');
+  db.exec('PRAGMA user_version = 6;');
 }

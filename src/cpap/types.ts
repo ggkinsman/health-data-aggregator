@@ -13,6 +13,9 @@ export interface CPAPSession {
   rin: number;
   mask_pressure_50: number;
   mask_pressure_95: number;
+  leak_50: number;            // L/min (converted from L/s in EDF via gain*60)
+  leak_95: number;            // L/min
+  leak_max: number;           // L/min
   resp_rate_50: number;
   tidal_vol_50: number;
   min_vent_50: number;
