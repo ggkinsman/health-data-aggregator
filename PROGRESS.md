@@ -27,6 +27,7 @@
 - ✅ CPAP leak rate tracking: V6 migration, gain*60 L/s→L/min conversion verified against OSCAR source (2026-03-16)
 - ✅ CPAP import switched to OSCAR as single source of truth (no more SD card fallback) (2026-03-16)
 - ✅ `/import-cpap` slash command for easy re-import after OSCAR upload (2026-03-16)
+- ✅ HRV source interpretation: Oura nocturnal HRV suppressed by CPAP pressure (RSA dampening), Apple Watch daytime HRV is primary recovery signal — prompts + templates updated (2026-03-16)
 
 ## In Progress
 - Nothing active
@@ -43,6 +44,7 @@
 - SQLite for local data storage with upsert-based sync
 - CPAP data via OSCAR (single source of truth) — not myAir API or direct SD card reads
 - DoxGPT for medical fact-checking of pipeline interpretations (manual copy-paste, no API)
+- Apple Watch daytime HRV is the primary autonomic recovery metric (Oura nocturnal HRV is suppressed by CPAP pressure)
 
 ## Data Sources
 | Source | Method | Status |

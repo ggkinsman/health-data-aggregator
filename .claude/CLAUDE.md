@@ -78,6 +78,13 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - Manual testing is fine for this solo project
 - Keep the root directory clean
 
+## HRV Data Source Interpretation
+- `daily_summary.avg_hrv` uses Oura as primary, Apple Watch as fallback — source switches around Oct 2024
+- Oura nocturnal HRV is mechanically suppressed by CPAP pressure (RSA dampening) — not a reliable autonomic recovery metric on CPAP
+- Apple Watch daytime HRV (`apple_health_records` → `HeartRateVariabilitySDNN`) is the better signal for tracking autonomic recovery
+- Always report both sources side-by-side when analyzing HRV trends
+- Do not compare pre-Oura HRV (2018-2024) directly with Oura-era HRV (Oct 2024+)
+
 ## DoxGPT Verification
 - Report templates include a "Verify with DoxGPT" section generating copy-paste-ready medical fact-check questions
 - Every question must be fully self-contained with patient profile, specific numbers, and the claim being validated

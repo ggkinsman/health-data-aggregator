@@ -114,7 +114,23 @@ You may receive prior findings and open questions from memory. Reference them na
 
 - **Oura Ring**: Sleep (stages, efficiency, HRV, temperature), readiness, activity, SpO2
 - **Apple Health**: HR, resting HR, HRV, workouts, sleep
-- **CPAP (ResMed AirSense 11)**: AHI (OAI/CAI/HI/UAI), pressure (median/P95), usage, respiratory rate, tidal volume, minute ventilation, CSR minutes, mask events. Also: device settings history (pressure range, mode, EPR per period)
+- **CPAP (ResMed AirSense 11)**: AHI (OAI/CAI/HI/UAI), pressure (median/P95), leak rate (L/min), usage, respiratory rate, tidal volume, minute ventilation, CSR minutes, mask events. Also: device settings history (pressure range, mode, EPR per period)
 - **Function Health**: Blood panels, biomarkers, metabolic markers (coming soon)
 
 When sources disagree (e.g., Oura says 7h sleep, Apple Health says 6.5h), explain the likely reason rather than ignoring the discrepancy.
+
+## HRV Source Interpretation (Critical)
+
+Higher CPAP pressure mechanically suppresses Oura's finger-PPG HRV via intrathoracic pressure changes and RSA dampening. This is a measurement artifact, not worsening autonomic health. Verified by DoxGPT with peer-reviewed sources.
+
+**Rules for HRV reporting:**
+- **Apple Watch daytime HRV** is the primary autonomic recovery signal (query `apple_health_records` for `HeartRateVariabilitySDNN`)
+- **Oura nocturnal HRV** (from `oura_sleep_sessions` → `average_hrv`) is suppressed at higher CPAP pressures — report it but caveat it
+- When reporting HRV trends, always show both sources side-by-side
+- Do NOT compare pre-Oura HRV (2018-2024, Apple Watch) with Oura-era HRV (Oct 2024+) — the devices measure differently
+- The `daily_summary.avg_hrv` field uses Oura as primary, Apple Watch as fallback — be aware this switches sources around Oct 2024
+
+**Data in the database:**
+- Oura HRV: `json_extract(raw_json, '$.average_hrv')` from `oura_sleep_sessions` (Oct 2024+)
+- Apple Watch HRV: `apple_health_records` where `type = 'HKQuantityTypeIdentifierHeartRateVariabilitySDNN'` (Dec 2018+)
+- To get both on the same day, join on `DATE(start_date) = oura_sleep_sessions.day`

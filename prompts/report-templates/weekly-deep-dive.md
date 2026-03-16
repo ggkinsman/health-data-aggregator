@@ -4,7 +4,7 @@ Generate a comprehensive weekly health analysis covering:
 
 1. **Week in review:** Headline summary of the week's health data
 2. **Sleep trends:** How sleep quality/duration changed across the week. Weeknight vs. weekend patterns.
-3. **Cardiovascular trends:** Resting HR, HRV trajectories over the week
+3. **Cardiovascular trends:** Resting HR, HRV trajectories over the week. Report both Apple Watch daytime HRV and Oura nocturnal HRV — they measure different things. Note: Oura HRV is mechanically suppressed by CPAP pressure (RSA dampening), so Apple Watch is the more reliable autonomic recovery signal.
 4. **Activity patterns:** Workout frequency, intensity, step counts. Rest days.
 5. **Cross-source patterns:** Connections between sleep, activity, readiness. What drove good/bad days?
 6. **Medium-term context:** How does this week compare to the prior 4 weeks?
