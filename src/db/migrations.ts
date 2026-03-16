@@ -33,6 +33,9 @@ export function runMigrations(db: Database.Database): void {
   if (currentVersion < 6) {
     migrateV6(db);
   }
+  if (currentVersion < 7) {
+    migrateV7(db);
+  }
 }
 
 /**
@@ -274,4 +277,25 @@ function migrateV6(db: Database.Database): void {
   db.exec('ALTER TABLE cpap_sessions ADD COLUMN leak_95 REAL');
   db.exec('ALTER TABLE cpap_sessions ADD COLUMN leak_max REAL');
   db.exec('PRAGMA user_version = 6;');
+}
+
+/**
+ * V7: Travel trips — contextual data for correlating travel/alcohol with health metrics
+ */
+function migrateV7(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS travel_trips (
+      depart_date TEXT NOT NULL,
+      return_date TEXT NOT NULL,
+      nights_away INTEGER NOT NULL,
+      destination TEXT NOT NULL,
+      trip_type TEXT NOT NULL,
+      trip_name TEXT NOT NULL,
+      imported_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (depart_date, destination)
+    );
+    CREATE INDEX IF NOT EXISTS idx_travel_trips_dates ON travel_trips(depart_date, return_date);
+  `);
+
+  db.exec('PRAGMA user_version = 7;');
 }

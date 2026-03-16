@@ -12,6 +12,7 @@
     "auth:oura": "tsx scripts/auth-oura.ts",
     "import:apple": "tsx scripts/import-apple-health.ts",
     "import:cpap": "tsx scripts/import-cpap.ts",
+    "import:travel": "tsx scripts/import-travel.ts",
     "build:summaries": "tsx scripts/build-summaries.ts",
     "health:ask": "tsx scripts/health-ask.ts",
     "health:report": "tsx scripts/health-report.ts"

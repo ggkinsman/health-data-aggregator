@@ -28,6 +28,7 @@
 - ✅ CPAP import switched to OSCAR as single source of truth (no more SD card fallback) (2026-03-16)
 - ✅ `/import-cpap` slash command for easy re-import after OSCAR upload (2026-03-16)
 - ✅ HRV source interpretation: Oura nocturnal HRV suppressed by CPAP pressure (RSA dampening), Apple Watch daytime HRV is primary recovery signal — prompts + templates updated (2026-03-16)
+- ✅ Travel trips table (V7 migration): 28 trips imported, correlates travel/alcohol with health metrics (2026-03-16)
 
 ## In Progress
 - Nothing active
@@ -52,3 +53,4 @@
 | Oura Ring | OAuth2 API + incremental sync | ✅ Working |
 | Apple Health | XML export parsing | ✅ 1.48M records imported |
 | CPAP (ResMed AirSense 11) | OSCAR backup STR.edf parser | ✅ 242 nights imported (incl. leak rate) |
+| Travel Trips | CSV import | ✅ 28 trips (Jan 2025 – May 2026) |

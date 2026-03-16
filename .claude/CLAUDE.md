@@ -14,10 +14,11 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `src/oura/` — Oura API client, auth, types (9 endpoints)
 - `src/apple-health/` — Apple Health XML parser, repository, types
 - `src/unified/` — Unified schema: daily summary builder, SQL views, activity type normalization
-- `src/db/` — SQLite database layer, migrations (V1: Oura, V2: Apple Health, V3: unified schema, V4: CPAP sessions, V5: CPAP device settings, V6: CPAP leak rate)
+- `src/db/` — SQLite database layer, migrations (V1: Oura, V2: Apple Health, V3: unified schema, V4: CPAP sessions, V5: CPAP device settings, V6: CPAP leak rate, V7: travel trips)
 - `src/storage/` — Encrypted token storage
 - `src/pipeline/` — Health researcher multi-agent pipeline (orchestrator, data context, code executor, session memory)
 - `src/cpap/` — CPAP EDF parser, repository, types (CPAPSession, CPAPDeviceSettings)
+- `data/travel_trips.csv` — Travel trip data (gitignored, imported into SQLite)
 - `scripts/` — CLI scripts (sync-oura, auth-oura, import-apple-health, build-summaries, health-ask, health-report)
 - `prompts/` — Agent system prompts (Dr. Hayden, 3 reviewers, self-reflection, report templates)
 - `reports/` — Generated health reports and session memory (gitignored)
@@ -34,6 +35,7 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `npm run build:summaries` — Build daily summary rollups (use `--days N` to limit)
 - `npm run health:ask -- "question"` — Interactive health data analysis (flags: `--continue`, `--show-review`)
 - `npm run import:cpap` — Import CPAP data from OSCAR's backup STR.edf
+- `npm run import:travel` — Import travel trips from CSV (default: `data/travel_trips.csv`)
 - `/import-cpap` — Import CPAP data from OSCAR, rebuild summaries, show what's new
 - `npm run health:report -- daily|weekly` — Generate automated health report (uses Anthropic API)
 - `/health-report daily|weekly` — Generate report locally in Claude Code (no API cost, queries SQLite directly)

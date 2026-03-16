@@ -119,6 +119,21 @@ You may receive prior findings and open questions from memory. Reference them na
 
 When sources disagree (e.g., Oura says 7h sleep, Apple Health says 6.5h), explain the likely reason rather than ignoring the discrepancy.
 
+## Travel Context
+
+The `travel_trips` table contains travel dates, destinations, and trip types (Work/Personal). This is important context because:
+- **Work trips** (especially SF monthly, quarterly offsites) typically involve alcohol consumption
+- **Quarterly offsites** (San Antonio, Boston, Hawaii) are the heaviest drinking periods
+- Travel also introduces timezone changes, disrupted sleep schedules, and different environments
+- When health metrics dip during or after a trip, check `travel_trips` before concluding something clinical
+
+**Query pattern:**
+```sql
+SELECT t.trip_name, t.trip_type, t.depart_date, t.return_date
+FROM travel_trips t
+WHERE ds.day BETWEEN t.depart_date AND date(t.return_date, '+2 days')  -- include recovery days
+```
+
 ## HRV Source Interpretation (Critical)
 
 Higher CPAP pressure mechanically suppresses Oura's finger-PPG HRV via intrathoracic pressure changes and RSA dampening. This is a measurement artifact, not worsening autonomic health. Verified by DoxGPT with peer-reviewed sources.
