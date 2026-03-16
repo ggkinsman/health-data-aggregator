@@ -24,6 +24,9 @@
 - ✅ CPAP device settings table (V5 migration): tracks pressure range changes from OSCAR, 3 settings periods seeded (2026-03-15)
 - ✅ DoxGPT verification questions added to daily/weekly report templates + Dr. Hayden prompt (2026-03-15)
 - ✅ `/health-report` slash command for local report generation without API costs (2026-03-15)
+- ✅ CPAP leak rate tracking: V6 migration, gain*60 L/s→L/min conversion verified against OSCAR source (2026-03-16)
+- ✅ CPAP import switched to OSCAR as single source of truth (no more SD card fallback) (2026-03-16)
+- ✅ `/import-cpap` slash command for easy re-import after OSCAR upload (2026-03-16)
 
 ## In Progress
 - Nothing active
@@ -38,7 +41,7 @@
 - OAuth2 required (Personal Access Tokens deprecated end of 2025)
 - Manual Apple Health exports for now (no iOS app)
 - SQLite for local data storage with upsert-based sync
-- CPAP data via OSCAR/STR.edf SD card reader — not myAir API
+- CPAP data via OSCAR (single source of truth) — not myAir API or direct SD card reads
 - DoxGPT for medical fact-checking of pipeline interpretations (manual copy-paste, no API)
 
 ## Data Sources
@@ -46,4 +49,4 @@
 |--------|--------|--------|
 | Oura Ring | OAuth2 API + incremental sync | ✅ Working |
 | Apple Health | XML export parsing | ✅ 1.48M records imported |
-| CPAP (ResMed AirSense 11) | STR.edf SD card parser | ✅ 241 nights imported |
+| CPAP (ResMed AirSense 11) | OSCAR backup STR.edf parser | ✅ 242 nights imported (incl. leak rate) |
