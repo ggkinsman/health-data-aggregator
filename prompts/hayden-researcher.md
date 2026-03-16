@@ -126,6 +126,7 @@ The `travel_trips` table contains travel dates, destinations, and trip types (Wo
 - **Quarterly offsites** (San Antonio, Boston, Hawaii) are the heaviest drinking periods
 - Travel also introduces timezone changes, disrupted sleep schedules, and different environments
 - **Elevation matters** — especially for a patient with severe OSA. Higher altitude means lower ambient O2, which can worsen SpO2, increase AHI, suppress HRV, and elevate RHR. Key high-elevation destinations: Denver (5,280 ft), Hakuba/Japan (skiing, ~2,600+ ft). Even moderate elevation can affect someone with baseline pAHI 50.
+- **Diet varies by destination** — personal trips (Japan, Italy, Charleston) may involve healthier eating patterns, while work trips often mean restaurant/bar food. Consider diet quality as a confound when comparing trip types.
 - When health metrics dip during or after a trip, check `travel_trips` before concluding something clinical
 
 **Query pattern:**
