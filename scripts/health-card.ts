@@ -124,8 +124,7 @@ const rhrNote = appleRhr ? staleNote(appleRhr.day, today) : '';
 
 const ahi      = cpap ? fmt(cpap.ahi as number, 1) : '—';
 const cpapHrs  = cpap ? fmtMins(cpap.usage_minutes as number) : '—';
-const pressure = cpap ? fmt(cpap.mask_pressure_50 as number, 1, 'cm') : '—';  // cmH₂O → cm saves space
-const leak     = cpap ? fmt(cpap.leak_50 as number, 1, 'L/m') : '—';          // L/min → L/m saves space
+const leak     = cpap ? fmt(cpap.leak_50 as number, 1, 'L/m') : '—';
 const cpapNote = cpap ? staleNote(cpap.day as string, today) : '';
 
 const location = summary.location_label ? ` — ${summary.location_label}` : '';
@@ -145,7 +144,7 @@ if (rhr !== '—' || hrv !== '—') {
 }
 
 if (ahi !== '—' || cpapHrs !== '—') {
-  lines.push(`😮 CPAP   AHI ${ahi}  ${cpapHrs}  P50 ${pressure}  Leak ${leak}${cpapNote}`);
+  lines.push(`😮 CPAP   AHI ${ahi}  ${cpapHrs}  Leak ${leak}${cpapNote}`);
 }
 
 if (steps !== '—' || cals !== '—' || workouts !== '—') {
