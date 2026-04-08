@@ -28,8 +28,9 @@ REPORT_TYPE_LABEL=$(echo "$REPORT_TYPE" | awk '{print toupper(substr($0,1,1)) su
 REPORT_DATE=$(date '+%b %d')
 LATEST_REPORT=$(ls -t "reports/${REPORT_TYPE}"/*.md 2>/dev/null | head -1 || echo "")
 
-if [[ -n "$LATEST_REPORT" ]]; then
-  ~/scripts/notify-telegram.sh "${REPORT_TYPE_LABEL} health report ready (${REPORT_DATE})" "$LATEST_REPORT" || true
+CARD=$(npx tsx scripts/health-card.ts 2>/dev/null || echo "")
+if [[ -n "$CARD" ]]; then
+  ~/scripts/notify-telegram.sh "$CARD" || true
 else
-  ~/scripts/notify-telegram.sh "${REPORT_TYPE_LABEL} health report ran (${REPORT_DATE}) — no output file found" || true
+  ~/scripts/notify-telegram.sh "${REPORT_TYPE_LABEL} health report ready (${REPORT_DATE})" || true
 fi
