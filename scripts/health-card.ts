@@ -24,10 +24,11 @@ function fmt(val: number | null | undefined, decimals = 0, unit = ''): string {
   return val.toFixed(decimals) + unit;
 }
 
-function fmtMins(mins: number | null | undefined): string {
+function fmtMins(mins: number | null | undefined, compact = false): string {
   if (mins == null) return '—';
   const h = Math.floor(mins / 60);
   const m = mins % 60;
+  if (compact) return h > 0 ? `${h}h${m < 10 ? '0' + m : m}` : `${m}m`;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
@@ -105,9 +106,9 @@ const readiness = fmt(summary.readiness_score as number);
 const sleep     = fmt(summary.sleep_score as number);
 const activity  = fmt(summary.activity_score as number);
 
-const sleepDur  = sleepRow ? fmtMins(sleepRow.total_sleep_minutes as number) : '—';
-const deep      = sleepRow ? fmtMins(sleepRow.deep_sleep_minutes as number) : '—';
-const rem       = sleepRow ? fmtMins(sleepRow.rem_sleep_minutes as number) : '—';
+const sleepDur  = sleepRow ? fmtMins(sleepRow.total_sleep_minutes as number, true) : '—';
+const deep      = sleepRow ? fmtMins(sleepRow.deep_sleep_minutes as number, true) : '—';
+const rem       = sleepRow ? fmtMins(sleepRow.rem_sleep_minutes as number, true) : '—';
 const sleepNote = sleepRow ? staleNote(sleepRow.day as string, today) : '';
 
 const steps    = summary.steps ? Number(summary.steps).toLocaleString() : '—';
@@ -123,7 +124,7 @@ const rhr     = appleRhr ? fmt(appleRhr.rhr, 0, ' bpm') : fmt(summary.avg_restin
 const rhrNote = appleRhr ? staleNote(appleRhr.day, today) : '';
 
 const ahi      = cpap ? fmt(cpap.ahi as number, 1) : '—';
-const cpapHrs  = cpap ? fmtMins(cpap.usage_minutes as number) : '—';
+const cpapHrs  = cpap ? fmtMins(cpap.usage_minutes as number, true) : '—';
 const leak     = cpap ? fmt(cpap.leak_50 as number, 1, 'L/m') : '—';
 const cpapNote = cpap ? staleNote(cpap.day as string, today) : '';
 
@@ -136,7 +137,7 @@ lines.push('');
 lines.push(`🟢 Scores  R:${readiness}  S:${sleep}  A:${activity}`);
 
 if (sleepDur !== '—' || deep !== '—' || rem !== '—') {
-  lines.push(`💤 Sleep   ${sleepDur}  Deep ${deep}  REM ${rem}${sleepNote}`);
+  lines.push(`💤 ${sleepDur}  D:${deep}  R:${rem}${sleepNote}`);
 }
 
 if (rhr !== '—' || hrv !== '—') {
@@ -144,7 +145,7 @@ if (rhr !== '—' || hrv !== '—') {
 }
 
 if (ahi !== '—' || cpapHrs !== '—') {
-  lines.push(`😮 CPAP   AHI ${ahi}  ${cpapHrs}  Leak ${leak}${cpapNote}`);
+  lines.push(`😮 AHI:${ahi}  ${cpapHrs}  L:${leak}${cpapNote}`);
 }
 
 if (steps !== '—' || cals !== '—' || workouts !== '—') {
