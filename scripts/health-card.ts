@@ -39,7 +39,7 @@ function daysDiff(a: string, b: string): number {
 function staleNote(dataDay: string, today: string): string {
   const d = daysDiff(dataDay, today);
   if (d <= 1) return '';
-  return ` (${d}d ago)`;
+  return ` (${d}d)`;  // short form — saves space on mobile
 }
 
 // ── Today ─────────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ const displayDate = new Date(summaryDay + 'T12:00:00').toLocaleDateString('en-US
 const sleepRow = db.prepare(`
   SELECT day, total_sleep_minutes, deep_sleep_minutes, rem_sleep_minutes, sleep_score
   FROM daily_summary
-  WHERE total_sleep_minutes IS NOT NULL
+  WHERE total_sleep_minutes > 120
   ORDER BY day DESC LIMIT 1
 `).get() as Record<string, number | string | null> | undefined;
 
