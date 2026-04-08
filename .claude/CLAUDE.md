@@ -49,6 +49,9 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - launchd job: `com.health-data-aggregator.weekly-report` (Sunday 6 PM deep dive)
 - Reports saved to: `reports/daily/` and `reports/weekly/`
 - Pipeline logs: `~/Library/Logs/health-pipeline.log`
+- Telegram notifications: `~/scripts/notify-telegram.sh` sends to @glennmini_bot on report success/failure; Oura sync intentionally excluded
+- Health card: `scripts/health-card.ts` queries SQLite directly and outputs a compact metric card (scores, sleep, HR, CPAP, activity) — sent instead of the raw .md report; zero API cost
+- Telegram listener: runs with `--permission-mode auto` so Gmini can execute tool calls autonomously; sends a startup ping on every (re)start
 
 ## Workout Deduplication
 - Apple Watch is the trusted HealthKit workout source (`source_name LIKE '%Watch%'`)

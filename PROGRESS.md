@@ -29,6 +29,10 @@
 - ✅ `/import-cpap` slash command for easy re-import after OSCAR upload (2026-03-16)
 - ✅ HRV source interpretation: Oura nocturnal HRV suppressed by CPAP pressure (RSA dampening), Apple Watch daytime HRV is primary recovery signal — prompts + templates updated (2026-03-16)
 - ✅ Travel trips table (V7 migration): 28 trips imported, correlates travel/alcohol with health metrics (2026-03-16)
+- ✅ iMessage remote control: `claude --channels` listener in `~/Projects/inbox`, launchd-managed (`com.claude.imessage-listener`), KeepAlive on crash (2026-04-07)
+- ✅ Telegram remote control: Gmini bot (`@glennmini_bot`), `claude --channels` listener, launchd-managed (`com.claude.telegram-listener`), KeepAlive on crash (2026-04-07)
+- ✅ Proactive Telegram notifications: health reports (metric card + failure alert) and nightly improve jobs (branch + PR link + app screenshots) push to Gmini via `~/scripts/notify-telegram.sh` (2026-04-07)
+- ✅ Telegram health card (`scripts/health-card.ts`): compact mobile-optimised metric card queried directly from SQLite — zero API cost, stale-data notes, empty sections suppressed (2026-04-07)
 
 ## In Progress
 - Nothing active
@@ -52,5 +56,5 @@
 |--------|--------|--------|
 | Oura Ring | OAuth2 API + incremental sync | ✅ Working |
 | Apple Health | XML export parsing | ✅ 1.48M records imported |
-| CPAP (ResMed AirSense 11) | OSCAR backup STR.edf parser | ✅ 242 nights imported (incl. leak rate) |
+| CPAP (ResMed AirSense 11) | OSCAR backup STR.edf parser | ✅ 249 nights imported (incl. leak rate) |
 | Travel Trips | CSV import | ✅ 28 trips (Jan 2025 – May 2026) |
