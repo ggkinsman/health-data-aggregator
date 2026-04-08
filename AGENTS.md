@@ -42,7 +42,7 @@ npm run health:ask      # one-off health data question
 - **Plugin:** official bun plugin (`--channels plugin:telegram@claude-plugins-official`)
 - **Cycle:** 30-min backstop + 60s health check (3 failures → recycle). Was 5-min blind cycle.
 - **Zombie cleanup:** `cleanup_channel_procs` kills stale bun processes before each new session and on EXIT
-- **Pending upgrade:** `hdcd-telegram` v0.1.1 (Rust binary, no zombies) installed at `~/.local/bin/hdcd-telegram`, registered in `~/Projects/inbox/.mcp.json`. Blocked by `--dangerously-load-development-channels` requiring interactive TUI on every start — not viable for unattended daemons. Claude-intel watchlist will flag when fixed.
+- **Pending upgrade:** `hdcd-telegram` v0.1.1 (Rust binary, no zombies) installed at `~/.local/bin/hdcd-telegram`. Blocked by `--dangerously-load-development-channels` requiring interactive TUI on every start — not viable for unattended daemons. NOTE: do NOT add hdcd-telegram to `~/Projects/inbox/.mcp.json` — it will load as a polling sidecar alongside the official plugin and split the Telegram update stream, breaking message delivery. Claude-intel watchlist will flag when the daemon-mode fix lands.
 - **Troubleshoot:** If Gmini stops responding, check for zombie bun processes: `ps aux | grep "bun.*telegram" | grep -v grep`. Kill stale PIDs, or `launchctl unload/load com.claude.telegram-listener.plist`.
 
 ## Key Domain Decisions
