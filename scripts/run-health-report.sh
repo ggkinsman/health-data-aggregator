@@ -29,10 +29,7 @@ REPORT_DATE=$(date '+%b %d')
 LATEST_REPORT=$(ls -t "reports/${REPORT_TYPE}"/*.md 2>/dev/null | head -1 || echo "")
 
 if [[ -n "$LATEST_REPORT" ]]; then
-  PREVIEW=$(head -c 400 "$LATEST_REPORT" || echo "(preview unavailable)")
-  ~/scripts/notify-telegram.sh "${REPORT_TYPE_LABEL} health report ready (${REPORT_DATE}):
-
-${PREVIEW}..." || true
+  ~/scripts/notify-telegram.sh "${REPORT_TYPE_LABEL} health report ready (${REPORT_DATE})" "$LATEST_REPORT" || true
 else
   ~/scripts/notify-telegram.sh "${REPORT_TYPE_LABEL} health report ran (${REPORT_DATE}) — no output file found" || true
 fi
