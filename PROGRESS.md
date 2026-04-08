@@ -33,6 +33,11 @@
 - ✅ Telegram remote control: Gmini bot (`@glennmini_bot`), `claude --channels` listener, launchd-managed (`com.claude.telegram-listener`), KeepAlive on crash (2026-04-07)
 - ✅ Proactive Telegram notifications: health reports (metric card + failure alert) and nightly improve jobs (branch + PR link + app screenshots) push to Gmini via `~/scripts/notify-telegram.sh` (2026-04-07)
 - ✅ Telegram health card (`scripts/health-card.ts`): compact mobile-optimised metric card queried directly from SQLite — zero API cost, stale-data notes, empty sections suppressed (2026-04-07)
+- ✅ Telegram polling watchdog: 5-min MAX_RUNTIME cycle in `start-telegram-listener.sh` prevents silent long-poll stalls; flag file distinguishes scheduled restarts from crashes (2026-04-07)
+- ✅ Claude Intel daily digest: Scout→Advisor→Skeptic pipeline searches Claude releases, Reddit, Simon Willison, MCP repo, openclaw ecosystem — pushes actionable setup improvements to Telegram at 8 AM via `com.claude-intel.daily` (2026-04-08)
+- ✅ Listener bun process cleanup: `cleanup_channel_procs()` in both listener scripts kills stale plugin server processes (SIGTERM→SIGKILL) before each session start and on EXIT — prevents 409 Conflict accumulation (2026-04-08)
+- ✅ iMessage listener MAX_RUNTIME watchdog: added 10-min recycle cycle matching Telegram pattern — prevents indefinite bun process accumulation (2026-04-08)
+- ✅ Telegram listener hardening: 30-min backstop cycle (was 5-min), 60s health check with 3-failure threshold, zombie cleanup retained; hdcd-telegram (Rust, no zombies) staged at `~/.local/bin/` pending daemon-mode fix in Claude Code (2026-04-08)
 
 ## In Progress
 - Nothing active
