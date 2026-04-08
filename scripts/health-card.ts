@@ -125,7 +125,7 @@ const rhrNote = appleRhr ? staleNote(appleRhr.day, today) : '';
 
 const ahi      = cpap ? fmt(cpap.ahi as number, 1) : '—';
 const cpapHrs  = cpap ? fmtMins(cpap.usage_minutes as number, true) : '—';
-const leak     = cpap ? fmt(cpap.leak_50 as number, 1, 'L/m') : '—';
+const leak     = cpap ? fmt(cpap.leak_50 as number, 1) : '—';
 const cpapNote = cpap ? staleNote(cpap.day as string, today) : '';
 
 const location = summary.location_label ? ` — ${summary.location_label}` : '';
@@ -134,7 +134,8 @@ const location = summary.location_label ? ` — ${summary.location_label}` : '';
 const lines: string[] = [];
 lines.push(`📊 Daily Health — ${displayDate}${location}`);
 lines.push('');
-lines.push(`🟢 Scores  R:${readiness}  S:${sleep}  A:${activity}`);
+const activityPart = activity !== '—' ? `  A:${activity}` : '';
+lines.push(`🟢 Scores  R:${readiness}  S:${sleep}${activityPart}`);
 
 if (sleepDur !== '—' || deep !== '—' || rem !== '—') {
   lines.push(`💤 ${sleepDur}  D:${deep}  R:${rem}${sleepNote}`);
@@ -145,7 +146,7 @@ if (rhr !== '—' || hrv !== '—') {
 }
 
 if (ahi !== '—' || cpapHrs !== '—') {
-  lines.push(`😮 AHI:${ahi}  ${cpapHrs}  L:${leak}${cpapNote}`);
+  lines.push(`😮 AHI:${ahi}  ${cpapHrs}  Lk:${leak}${cpapNote}`);
 }
 
 if (steps !== '—' || cals !== '—' || workouts !== '—') {
