@@ -124,20 +124,32 @@ const rhrNote = appleRhr ? staleNote(appleRhr.day, today) : '';
 
 const ahi      = cpap ? fmt(cpap.ahi as number, 1) : '—';
 const cpapHrs  = cpap ? fmtMins(cpap.usage_minutes as number) : '—';
-const pressure = cpap ? fmt(cpap.mask_pressure_50 as number, 1, ' cmH₂O') : '—';
-const leak     = cpap ? fmt(cpap.leak_50 as number, 1, ' L/min') : '—';
+const pressure = cpap ? fmt(cpap.mask_pressure_50 as number, 1, 'cm') : '—';  // cmH₂O → cm saves space
+const leak     = cpap ? fmt(cpap.leak_50 as number, 1, 'L/m') : '—';          // L/min → L/m saves space
 const cpapNote = cpap ? staleNote(cpap.day as string, today) : '';
 
 const location = summary.location_label ? ` — ${summary.location_label}` : '';
 
-const card = [
-  `📊 Daily Health — ${displayDate}${location}`,
-  ``,
-  `Scores    R:${readiness}  S:${sleep}  A:${activity}`,
-  `💤 Sleep  ${sleepDur}  Deep ${deep}  REM ${rem}${sleepNote}`,
-  `❤️  HR    RHR ${rhr}${rhrNote}  HRV ${hrv}${hrvNote}`,
-  `😮 CPAP   AHI ${ahi}  ${cpapHrs}  P50 ${pressure}  Leak ${leak}${cpapNote}`,
-  `🏃 Move   ${steps} steps  ${cals}  Workouts ${workouts}`,
-].join('\n');
+// Only include a line if it has at least one real value (not all dashes)
+const lines: string[] = [];
+lines.push(`📊 Daily Health — ${displayDate}${location}`);
+lines.push('');
+lines.push(`🟢 Scores  R:${readiness}  S:${sleep}  A:${activity}`);
 
-console.log(card);
+if (sleepDur !== '—' || deep !== '—' || rem !== '—') {
+  lines.push(`💤 Sleep   ${sleepDur}  Deep ${deep}  REM ${rem}${sleepNote}`);
+}
+
+if (rhr !== '—' || hrv !== '—') {
+  lines.push(`❤️  HR     RHR ${rhr}${rhrNote}  HRV ${hrv}${hrvNote}`);
+}
+
+if (ahi !== '—' || cpapHrs !== '—') {
+  lines.push(`😮 CPAP   AHI ${ahi}  ${cpapHrs}  P50 ${pressure}  Leak ${leak}${cpapNote}`);
+}
+
+if (steps !== '—' || cals !== '—' || workouts !== '—') {
+  lines.push(`🏃 Move   ${steps} steps  ${cals}  Workouts ${workouts}`);
+}
+
+console.log(lines.join('\n'));
