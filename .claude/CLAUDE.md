@@ -19,7 +19,7 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 - `src/pipeline/` — Health researcher multi-agent pipeline (orchestrator, data context, code executor, session memory)
 - `src/cpap/` — CPAP EDF parser, repository, types (CPAPSession, CPAPDeviceSettings)
 - `data/travel_trips.csv` — Travel trip data (gitignored, imported into SQLite)
-- `scripts/` — CLI scripts (sync-oura, auth-oura, import-apple-health, build-summaries, health-ask, health-report)
+- `scripts/` — CLI scripts (sync-oura, auth-oura, import-apple-health, build-summaries, health-ask, health-report, health-card, run-sync.sh, run-health-report.sh)
 - `prompts/` — Agent system prompts (Dr. Hayden, 3 reviewers, self-reflection, report templates)
 - `reports/` — Generated health reports and session memory (gitignored)
 - `data/` — Local health data storage (gitignored)
@@ -98,7 +98,14 @@ Personal health data aggregation tool combining Oura Ring, Apple Health, and CPA
 ## CPAP Device Settings
 - `cpap_device_settings` table tracks pressure range changes over time
 - Join to sessions: `c.day BETWEEN s.start_date AND s.end_date`
-- Currently 3 settings periods seeded from OSCAR (Jul 2025 – Mar 2026)
+- Currently 3 settings periods seeded from OSCAR (Jul 2025 onwards; re-import after OSCAR upload to extend)
+
+## Environment Variables
+- `ANTHROPIC_API_KEY` — required for AI pipeline (`health:ask`, `health:report`)
+- `GLENN_MAX_HR` — configurable max HR for zone calculations (default: 185 bpm)
+
+## Agent Instructions
+- `AGENTS.md` in repo root — covers agent-specific workflow, data sources table, and launchd jobs; read alongside this file
 
 ## Security Requirements
 - API tokens and secrets go in `.env` only
